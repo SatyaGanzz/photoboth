@@ -185,8 +185,18 @@
             <video id="cameraVideo" autoplay playsinline muted></video>
             <canvas id="cameraCanvasFallback" style="display:none;"></canvas>
 
+            <!-- Photobooth Live Effects Overlays -->
+            <div id="vignetteOverlay" class="fx-vignette-layer" style="display:none;"></div>
+            <div id="grainOverlay" class="fx-grain-layer" style="display:none;"></div>
+            <div id="lightLeakOverlay" class="fx-light-leak-layer" style="display:none;"></div>
+            <div id="bloomOverlay" class="fx-bloom-layer" style="display:none;"></div>
+            <div id="dateStampOverlay" class="fx-date-stamp-layer" style="display:block;">
+              <span id="dateStampText">'26 09 07</span>
+            </div>
+            <div id="stickerOverlay" class="fx-sticker-layer" style="display:none;"></div>
+
             <!-- CRT Scanlines simulation layer -->
-            <div class="scanlines" style="position:absolute; inset:0; pointer-events:none; opacity:0.35; z-index:2;"></div>
+            <div class="scanlines" style="position:absolute; inset:0; pointer-events:none; opacity:0.25; z-index:2;"></div>
 
             <!-- Viewfinder Rule-of-Thirds Grid Overlay -->
             <div class="viewfinder-grid">
@@ -281,78 +291,140 @@
         </main>
 
         <!-- -------------------------------------------------------------
-             RIGHT COLUMN: LAYOUT SPECIFICATION & DISPATCH
+             RIGHT COLUMN: PHOTOBOOTH FILTERS & EFFECTS SUITE
              ------------------------------------------------------------- -->
         <aside class="spec-panel neu-flat">
           <div class="panel-header">
             <div class="panel-title">
-              <span class="panel-title-dot" style="background: var(--neu-cyan);"></span>
-              <h2>LAYOUT SPECIFICATION</h2>
+              <span class="panel-title-dot" style="background: var(--neu-accent);"></span>
+              <h2>FILTER & EFEK PHOTOBOOTH</h2>
             </div>
-            <span class="panel-badge neu-inset" style="color:var(--neu-emerald); font-weight:700;">READY</span>
+            <span id="activeFilterBadge" class="panel-badge neu-inset" style="color:var(--neu-accent); font-weight:700;">NATURAL</span>
           </div>
 
-          <!-- Frame Style Matrix -->
+          <!-- 1. Preset Tone Photobooth -->
           <div class="spec-section">
-            <label class="spec-section-label">SELECT FRAME MATRIX</label>
-            <div class="frame-matrix-grid">
-              <button class="neu-button frame-matrix-btn active" onclick="selectPrintTemplate(1)">
-                <div class="color-swatch-circle" style="background:#FFFFFF; border:2px solid #CBD5E1;"></div>
-                <span class="frame-matrix-label">CLASSIC</span>
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <label class="spec-section-label">PRESET TONE WARNA</label>
+              <span style="font-size:0.6rem; color:var(--text-muted); font-family:'Space Mono', monospace;">8 LOOKS</span>
+            </div>
+            <div class="pb-filter-grid">
+              <button class="neu-button pb-filter-btn active" data-filter="none" onclick="setCameraFilter('none', this)">
+                <span class="pb-filter-dot" style="background:#FFFFFF; border:1px solid #CBD5E1;"></span>
+                <span class="pb-filter-name">NATURAL</span>
               </button>
-              <button class="neu-button frame-matrix-btn" onclick="selectPrintTemplate(2)">
-                <div class="color-swatch-circle" style="background:#0F172A; border:2px solid #334155;"></div>
-                <span class="frame-matrix-label">DARK</span>
+              <button class="neu-button pb-filter-btn" data-filter="bw" onclick="setCameraFilter('bw', this)">
+                <span class="pb-filter-dot" style="background:#0F172A;"></span>
+                <span class="pb-filter-name">B&W NOIR</span>
               </button>
-              <button class="neu-button frame-matrix-btn" onclick="selectPrintTemplate(3)">
-                <div class="color-swatch-circle" style="background:#FFE4E6; border:2px solid #FDA4AF;"></div>
-                <span class="frame-matrix-label">BLUSH</span>
+              <button class="neu-button pb-filter-btn" data-filter="kpastel" onclick="setCameraFilter('kpastel', this)">
+                <span class="pb-filter-dot" style="background:#FDA4AF;"></span>
+                <span class="pb-filter-name">K-PASTEL</span>
               </button>
-              <button class="neu-button frame-matrix-btn" onclick="selectPrintTemplate(4)">
-                <div class="color-swatch-circle" style="background:#FEF3C7; border:2px solid #FCD34D;"></div>
-                <span class="frame-matrix-label">WARM</span>
+              <button class="neu-button pb-filter-btn" data-filter="warm" onclick="setCameraFilter('warm', this)">
+                <span class="pb-filter-dot" style="background:#FCD34D;"></span>
+                <span class="pb-filter-name">WARM RETRO</span>
+              </button>
+              <button class="neu-button pb-filter-btn" data-filter="vintage" onclick="setCameraFilter('vintage', this)">
+                <span class="pb-filter-dot" style="background:#D97706;"></span>
+                <span class="pb-filter-name">VINTAGE</span>
+              </button>
+              <button class="neu-button pb-filter-btn" data-filter="cyber" onclick="setCameraFilter('cyber', this)">
+                <span class="pb-filter-dot" style="background:#00C2CB;"></span>
+                <span class="pb-filter-name">CYBER GLOW</span>
+              </button>
+              <button class="neu-button pb-filter-btn" data-filter="cool" onclick="setCameraFilter('cool', this)">
+                <span class="pb-filter-dot" style="background:#38BDF8;"></span>
+                <span class="pb-filter-name">COOL BLUE</span>
+              </button>
+              <button class="neu-button pb-filter-btn" data-filter="cinematic" onclick="setCameraFilter('cinematic', this)">
+                <span class="pb-filter-dot" style="background:#10B981;"></span>
+                <span class="pb-filter-name">CINEMATIC</span>
               </button>
             </div>
           </div>
 
-          <!-- Studio Look & Color Profile -->
+          <!-- 2. Photobooth Live Effects Overlays -->
           <div class="spec-section">
-            <label class="spec-section-label">LOOK & COLOR PROFILE</label>
-            <div class="look-profile-grid">
-              <button class="neu-button look-profile-btn active" onclick="setFilter('none', this)">NATURAL</button>
-              <button class="neu-button look-profile-btn" onclick="setFilter('grayscale', this)">MONO B&W</button>
-              <button class="neu-button look-profile-btn" onclick="setFilter('pop', this)">CYBER GLOW</button>
+            <label class="spec-section-label">EFEK PHOTOBOOTH LIVE</label>
+            <div class="pb-effects-grid">
+              <button class="neu-button pb-effect-toggle" id="btnFxVignette" onclick="toggleCameraFx('vignette')">
+                <span class="pb-fx-icon">🔘</span>
+                <span>VIGNETTE</span>
+              </button>
+              <button class="neu-button pb-effect-toggle" id="btnFxGrain" onclick="toggleCameraFx('grain')">
+                <span class="pb-fx-icon">🎞️</span>
+                <span>FILM GRAIN</span>
+              </button>
+              <button class="neu-button pb-effect-toggle" id="btnFxLightLeak" onclick="toggleCameraFx('lightLeak')">
+                <span class="pb-fx-icon">☀️</span>
+                <span>LIGHT LEAK</span>
+              </button>
+              <button class="neu-button pb-effect-toggle" id="btnFxBloom" onclick="toggleCameraFx('bloom')">
+                <span class="pb-fx-icon">✨</span>
+                <span>SOFT GLOW</span>
+              </button>
+              <button class="neu-button pb-effect-toggle active" id="btnFxDateStamp" onclick="toggleCameraFx('dateStamp')">
+                <span class="pb-fx-icon">📅</span>
+                <span>DATE STAMP</span>
+              </button>
             </div>
           </div>
 
-          <!-- Typography / Metadata Customization -->
-          <div class="metadata-inputs-box neu-inset">
-            <span style="font-family:'Space Mono', monospace; font-size:0.65rem; font-weight:700; color:var(--text-muted); text-transform:uppercase;">
-              METADATA HEADER TEXT
-            </span>
-            <div class="metadata-field">
-              <label for="inputStripTitle">HEADER TITLE</label>
-              <input type="text" id="inputStripTitle" class="neu-input-field" value="SATYA MEMORIES" oninput="updateStripTexts()">
-            </div>
-            <div class="metadata-field">
-              <label for="inputStripSub">SUB-TELEMETRY STRING</label>
-              <input type="text" id="inputStripSub" class="neu-input-field" value="STUDIO EDITION // 2026-X" oninput="updateStripTexts()">
+          <!-- 3. Photobooth Frame Stickers / Doodles -->
+          <div class="spec-section">
+            <label class="spec-section-label">STIKER & DEKORASI BINGKAI</label>
+            <div class="pb-stickers-grid">
+              <button class="neu-button pb-sticker-btn active" data-sticker="none" onclick="setCameraSticker('none', this)">
+                <span>OFF</span>
+              </button>
+              <button class="neu-button pb-sticker-btn" data-sticker="sparkles" onclick="setCameraSticker('sparkles', this)">
+                <span>✨ SPARKLES</span>
+              </button>
+              <button class="neu-button pb-sticker-btn" data-sticker="hearts" onclick="setCameraSticker('hearts', this)">
+                <span>💕 HEARTS</span>
+              </button>
+              <button class="neu-button pb-sticker-btn" data-sticker="cat" onclick="setCameraSticker('cat', this)">
+                <span>🐱 DOODLE</span>
+              </button>
+              <button class="neu-button pb-sticker-btn" data-sticker="stamp" onclick="setCameraSticker('stamp', this)">
+                <span>📸 STAMP</span>
+              </button>
             </div>
           </div>
 
-          <!-- Print Dispatch Actions -->
+          <!-- 4. Fine Tune Adjustments -->
+          <div class="metadata-inputs-box neu-inset" style="padding:10px 12px; gap:8px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span style="font-family:'Space Mono', monospace; font-size:0.62rem; font-weight:700; color:var(--text-muted); text-transform:uppercase;">
+                PENYESUAIAN MANUAL
+              </span>
+              <button class="neu-button" style="padding:2px 8px; font-size:0.6rem;" onclick="resetCameraFx()">
+                RESET ALL
+              </button>
+            </div>
+
+            <div class="pb-slider-row">
+              <span class="pb-slider-title">BRIGHTNESS: <strong id="valCamBrightness" class="mono">0</strong></span>
+              <input type="range" class="range-slider" id="sliderCamBrightness" min="-40" max="40" value="0" oninput="updateCameraSlider('brightness', this.value)">
+            </div>
+            <div class="pb-slider-row">
+              <span class="pb-slider-title">CONTRAST: <strong id="valCamContrast" class="mono">0</strong></span>
+              <input type="range" class="range-slider" id="sliderCamContrast" min="-40" max="40" value="0" oninput="updateCameraSlider('contrast', this.value)">
+            </div>
+            <div class="pb-slider-row">
+              <span class="pb-slider-title">WARMTH: <strong id="valCamWarmth" class="mono">0</strong></span>
+              <input type="range" class="range-slider" id="sliderCamWarmth" min="-40" max="40" value="0" oninput="updateCameraSlider('warmth', this.value)">
+            </div>
+          </div>
+
+          <!-- 5. Dispatch / Next Step Actions -->
           <div class="dispatch-actions-box">
-            <button class="neu-button" style="width:100%; padding:10px;" onclick="shuffleStripOrder()">
-              <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-                <path d="M4 6h16M4 12h16m-7 6h7"></path>
+            <button class="btn-dispatch-dark" onclick="switchScreen('layout')">
+              <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" style="color:var(--neu-emerald);">
+                <path d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path>
               </svg>
-              PERMUTE FRAME SLOTS
-            </button>
-            <button class="btn-dispatch-dark" onclick="proceedToPrint()">
-              <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" style="color:var(--neu-emerald);">
-                <path d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
-              </svg>
-              <span>DISPATCH TO PRINT &gt;&gt;&gt;</span>
+              <span>ATUR STRIP & CETAK &gt;&gt;&gt;</span>
             </button>
           </div>
 
@@ -492,17 +564,54 @@
     <section id="screen-layout" class="screen">
       <div class="dual-strip-workspace">
 
-        <!-- DUAL STRIP PREVIEW MOUNT -->
+        <!-- DUAL / 4R STRIP PREVIEW MOUNT -->
         <div class="dual-strip-preview-tray neu-flat">
-          <div class="panel-header" style="margin-bottom:0;">
+          <div class="panel-header" style="margin-bottom:8px;">
             <div class="panel-title">
               <span class="panel-title-dot" style="background: var(--neu-emerald);"></span>
-              <h2>PREVIEW DUAL STRIP 3x1 (CETAK 2 BINGKAI)</h2>
+              <h2 id="layoutHeaderTitle">PREVIEW LAYOUT 4R (102 × 152 MM)</h2>
             </div>
-            <span class="panel-badge neu-inset">TOTAL 6 FOTO</span>
+            <span class="panel-badge neu-inset" id="layoutBadgeCount">3 FOTO VERTIKAL</span>
           </div>
 
-          <div class="dual-strip-mount neu-inset">
+          <!-- Format Selector Buttons -->
+          <div class="layout-mode-selector-tray neu-inset">
+            <button class="neu-button layout-mode-btn active" id="btnLayout4R" onclick="setLayoutFormat('4r')">
+              <span>📄 FORMAT 4R (102×152mm // 3 FOTO)</span>
+            </button>
+            <button class="neu-button layout-mode-btn" id="btnLayoutDual" onclick="setLayoutFormat('dual')">
+              <span>🎞️ DUAL STRIP (2× 2x6" // 6 FOTO)</span>
+            </button>
+          </div>
+
+          <!-- 4R MOUNT (3 VERTICAL PORTRAIT PHOTOS, 102x152mm @ 300 DPI: 1205x1795px) -->
+          <div class="dual-strip-mount neu-inset" id="mount4R" style="display:flex; justify-content:center; padding: 20px;">
+            <div class="four-r-sheet-wrapper">
+              <div id="photoSheet4R" class="four-r-sheet">
+                <div class="four-r-photos-stack" id="fourRStack">
+                  <div class="four-r-slot" id="fourRSlot0" onclick="swapSlot(0)" title="Klik untuk tukar posisi Foto 1">
+                    <span class="strip-slot-badge" style="background:var(--neu-accent);">01</span>
+                    <img id="fourRImg0" src="" alt="Slot 1">
+                  </div>
+                  <div class="four-r-slot" id="fourRSlot1" onclick="swapSlot(1)" title="Klik untuk tukar posisi Foto 2">
+                    <span class="strip-slot-badge" style="background:var(--neu-accent);">02</span>
+                    <img id="fourRImg1" src="" alt="Slot 2">
+                  </div>
+                  <div class="four-r-slot" id="fourRSlot2" onclick="swapSlot(2)" title="Klik untuk tukar posisi Foto 3">
+                    <span class="strip-slot-badge" style="background:var(--neu-accent);">03</span>
+                    <img id="fourRImg2" src="" alt="Slot 3">
+                  </div>
+                </div>
+                <div class="four-r-footer">
+                  <div class="four-r-footer-text" id="fourRTextDisplay">SATYA MEMORIES</div>
+                  <div class="four-r-footer-sub" id="fourRDateDisplay">STUDIO EDITION // 2026-X</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- DUAL STRIP MOUNT (2x6 Cut, 6 FOTO) -->
+          <div class="dual-strip-mount neu-inset" id="mountDual" style="display:none;">
             <!-- STRIP 1 (BINGKAI A - FOTO 1, 2, 3) -->
             <div class="single-strip-wrapper">
               <span class="strip-column-header-tag neu-inset" style="color:var(--neu-emerald);">STRIP 1 // BINGKAI A</span>
@@ -556,7 +665,7 @@
 
           <div style="display:flex; justify-content:space-between; align-items:center; font-family:'Space Mono',monospace; font-size:0.65rem; color:var(--text-muted); padding:0 4px;">
             <span>TIP: Klik foto pada slot strip untuk menukar posisi frame.</span>
-            <span>FORMAT CETAK: 4x6" (DUAL 2x6 CUT)</span>
+            <span id="layoutFormatFooterLabel">FORMAT CETAK: 4R (102 × 152 mm // 1205 × 1795 px @ 300 DPI)</span>
           </div>
         </div>
 
@@ -629,6 +738,29 @@
             </div>
           </div>
 
+          <!-- Pengaturan Fleksibel Frame Foto 4R -->
+          <div class="spec-section" id="sec4RFrameControls">
+            <label class="spec-section-label">UKURAN FRAME FOTO 4R (FLEKSIBEL)</label>
+            <div class="metadata-inputs-box neu-inset" style="padding:10px 12px; gap:8px;">
+              <div class="pb-slider-row">
+                <span class="pb-slider-title">LEBAR FRAME: <strong id="val4RWidth" class="mono">90 mm</strong></span>
+                <input type="range" class="range-slider" id="slider4RWidth" min="70" max="96" value="90" oninput="update4RFrameDimensions()">
+              </div>
+              <div class="pb-slider-row">
+                <span class="pb-slider-title">TINGGI FRAME: <strong id="val4RHeight" class="mono">40 mm</strong></span>
+                <input type="range" class="range-slider" id="slider4RHeight" min="30" max="46" value="40" oninput="update4RFrameDimensions()">
+              </div>
+              <div class="pb-slider-row">
+                <span class="pb-slider-title">SPACING ANTAR FOTO: <strong id="val4RGap" class="mono">6 mm</strong></span>
+                <input type="range" class="range-slider" id="slider4RGap" min="2" max="14" value="6" oninput="update4RFrameDimensions()">
+              </div>
+              <div class="pb-slider-row">
+                <span class="pb-slider-title">SUDUT BINGKAI (RADIUS): <strong id="val4RRadius" class="mono">8 px</strong></span>
+                <input type="range" class="range-slider" id="slider4RRadius" min="0" max="24" value="8" oninput="update4RFrameDimensions()">
+              </div>
+            </div>
+          </div>
+
           <!-- Metadata Footer Texts -->
           <div class="metadata-inputs-box neu-inset">
             <span style="font-family:'Space Mono', monospace; font-size:0.65rem; font-weight:700; color:var(--text-muted); text-transform:uppercase;">
@@ -697,6 +829,7 @@
           <div class="metadata-field">
             <label for="selectPaperSize">FORMAT KERTAS CETAK</label>
             <select id="selectPaperSize" class="neu-input-field">
+              <option value="4R" selected>4R Paper (102 × 152 mm // 1205 × 1795 px @ 300 DPI)</option>
               <option value="4x6">4x6 inches (Postcard Sheet = Dual 2x6 Strips)</option>
               <option value="2x6">2x6 inches (Single Strip Direct Cut)</option>
               <option value="5x7">5x7 inches (Studio Frame Display)</option>
@@ -717,7 +850,7 @@
           </div>
 
           <div style="display: flex; flex-direction: column; gap: 10px; margin-top: auto;">
-            <button class="btn-dispatch-dark" style="width: 100%; padding: 14px 20px; font-size: 0.9rem;" onclick="dispatchPrintJob()">
+            <button class="btn-dispatch-dark" style="width: 100%; padding: 14px 20px; font-size: 0.9rem;" onclick="requestPrintConfirmation()">
               <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" style="color:var(--neu-emerald);">
                 <path d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
               </svg>
@@ -788,6 +921,50 @@
           </button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- PRINT CONFIRMATION / NOTICE ALERT MODAL -->
+  <div id="printNoticeModal" class="auth-overlay hidden">
+    <div class="auth-card" id="printNoticeCardElement" style="max-width: 440px;">
+      <div class="auth-header-icon neu-inset" style="color: var(--neu-amber);">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+          <line x1="12" y1="9" x2="12" y2="13"></line>
+          <line x1="12" y1="17" x2="12.01" y2="17"></line>
+        </svg>
+      </div>
+      <h2 class="auth-title">PEMBERITAHUAN CETAK</h2>
+      <p class="auth-subtitle">Pastikan pilihan foto, urutan slot frame, dan filter sudah sesuai sebelum dikirim ke mesin cetak.</p>
+
+      <div class="neu-inset-sm" style="margin-bottom: 16px; padding: 12px 14px; text-align: left; line-height: 1.6;">
+        <div style="font-size: 0.65rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 6px;">Detail Ringkasan Cetak:</div>
+        <div style="font-size: 0.78rem; color: var(--text-main); display: flex; justify-content: space-between;">
+          <span style="color:var(--text-secondary);">Sesi Aktif:</span>
+          <strong id="noticeSessionId" class="mono">-</strong>
+        </div>
+        <div style="font-size: 0.78rem; color: var(--text-main); display: flex; justify-content: space-between;">
+          <span style="color:var(--text-secondary);">Format Layout:</span>
+          <strong id="noticeLayoutFormat">4R (102 × 152 mm) // 3 Foto Vertikal</strong>
+        </div>
+        <div style="font-size: 0.78rem; color: var(--text-main); display: flex; justify-content: space-between;">
+          <span style="color:var(--text-secondary);">Total Lembar:</span>
+          <strong id="noticeCopiesCount">1 Lembar</strong>
+        </div>
+        <div style="font-size: 0.78rem; color: var(--text-main); display: flex; justify-content: space-between;">
+          <span style="color:var(--text-secondary);">Kualitas Cetak:</span>
+          <strong style="color:var(--neu-emerald);">300 DPI Lab Quality</strong>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 10px;">
+        <button type="button" class="neu-button" style="flex:1;" onclick="closePrintNoticeModal()">
+          Periksa Lagi
+        </button>
+        <button type="button" class="btn-dispatch-dark" style="flex:1.4;" onclick="confirmAndExecutePrint()">
+          Ya, Cetak Sekarang
+        </button>
+      </div>
     </div>
   </div>
 

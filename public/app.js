@@ -17,13 +17,31 @@ const state = {
   selectedPhotoIds: [],
   galleryFilter: 'all',
   editingPhotoId: null,
-  currentSessionId: localStorage.getItem('photobooth_session_id') || null,
-  currentCustomerName: localStorage.getItem('photobooth_customer_name') || null,
+  currentSessionId: null, // Always start fresh on script run, never continue old session
+  currentCustomerName: null,
   authToken: localStorage.getItem('photobooth_auth_token') || null,
   authUser: localStorage.getItem('photobooth_auth_user') || null,
   selectedTemplateId: 1,
   customTemplateDataUrl: null,
   timerDelay: 3,
+  cameraFx: {
+    filter: 'none',
+    vignette: false,
+    grain: false,
+    lightLeak: false,
+    bloom: false,
+    dateStamp: true,
+    sticker: 'none',
+    brightness: 0,
+    contrast: 0,
+    warmth: 0
+  },
+  fourR: {
+    widthMm: 90,
+    heightMm: 40,
+    gapMm: 6,
+    radiusPx: 8
+  },
   editor: {
     brightness: 0,
     contrast: 0,
@@ -34,6 +52,7 @@ const state = {
     originalImage: null
   },
   strip: {
+    layoutFormat: '4r',
     photoIds: [],
     templateId1: 1,
     templateId2: 1,
@@ -364,15 +383,19 @@ function clearLiveReel() {
 
 // --- INITIALIZATION ---
 window.addEventListener('DOMContentLoaded', async () => {
+  // Always clear previous session on initial run so it is never a continue session
+  localStorage.removeItem('photobooth_session_id');
+  localStorage.removeItem('photobooth_customer_name');
+  state.currentSessionId = null;
+  state.currentCustomerName = null;
+  clearLiveReel();
+
   const authed = await verifyAuth();
   if (authed) {
     await initCamera();
-    if (!state.currentSessionId) {
-      openNewSessionModal();
-    } else {
-      updateSessionUI();
-      await loadPhotos();
-    }
+    applyCameraFxToLiveView();
+    update4RFrameDimensions();
+    openNewSessionModal();
   }
   setupKeyboardShortcuts();
 });
@@ -632,9 +655,16 @@ async function captureCurrentFrame() {
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     const ctx = canvas.getContext('2d');
+    ctx.save();
     ctx.translate(canvas.width, 0);
     ctx.scale(-1, 1);
+    ctx.filter = getActiveCameraFilterString();
     ctx.drawImage(video, 0, 0);
+    ctx.restore();
+
+    // Bake Photobooth Live Effects (Vignette, Light Leak, Film Grain, Date Stamp, Stickers)
+    applyActiveFxToCanvas(ctx, canvas.width, canvas.height);
+
     base64Image = canvas.toDataURL('image/jpeg', 0.92);
   }
 
@@ -986,6 +1016,350 @@ async function saveEditorChanges() {
   }
 }
 
+// --- PHOTOBOOTH CAMERA FILTERS & LIVE FX SUITE ---
+function setCameraFilter(filterName, btnEl) {
+  state.cameraFx.filter = filterName;
+  document.querySelectorAll('.pb-filter-btn').forEach((b) => b.classList.remove('active'));
+  if (btnEl) btnEl.classList.add('active');
+  applyCameraFxToLiveView();
+}
+
+function toggleCameraFx(fxName) {
+  state.cameraFx[fxName] = !state.cameraFx[fxName];
+  const btnIdMap = {
+    vignette: 'btnFxVignette',
+    grain: 'btnFxGrain',
+    lightLeak: 'btnFxLightLeak',
+    bloom: 'btnFxBloom',
+    dateStamp: 'btnFxDateStamp'
+  };
+  const btn = document.getElementById(btnIdMap[fxName]);
+  if (btn) btn.classList.toggle('active', !!state.cameraFx[fxName]);
+  applyCameraFxToLiveView();
+}
+
+function setCameraSticker(stickerName, btnEl) {
+  state.cameraFx.sticker = stickerName;
+  document.querySelectorAll('.pb-sticker-btn').forEach((b) => b.classList.remove('active'));
+  if (btnEl) btnEl.classList.add('active');
+  applyCameraFxToLiveView();
+}
+
+function updateCameraSlider(param, value) {
+  state.cameraFx[param] = parseInt(value, 10);
+  applyCameraFxToLiveView();
+}
+
+function resetCameraFx() {
+  state.cameraFx = {
+    filter: 'none',
+    vignette: false,
+    grain: false,
+    lightLeak: false,
+    bloom: false,
+    dateStamp: true,
+    sticker: 'none',
+    brightness: 0,
+    contrast: 0,
+    warmth: 0
+  };
+
+  document.querySelectorAll('.pb-filter-btn').forEach((b) => {
+    b.classList.toggle('active', b.dataset.filter === 'none');
+  });
+
+  ['vignette', 'grain', 'lightLeak', 'bloom'].forEach((k) => {
+    const btnId = 'btnFx' + k.charAt(0).toUpperCase() + k.slice(1);
+    const b = document.getElementById(btnId);
+    if (b) b.classList.remove('active');
+  });
+  const dateBtn = document.getElementById('btnFxDateStamp');
+  if (dateBtn) dateBtn.classList.add('active');
+
+  document.querySelectorAll('.pb-sticker-btn').forEach((b) => {
+    b.classList.toggle('active', b.dataset.sticker === 'none');
+  });
+
+  const sB = document.getElementById('sliderCamBrightness');
+  const sC = document.getElementById('sliderCamContrast');
+  const sW = document.getElementById('sliderCamWarmth');
+  if (sB) sB.value = 0;
+  if (sC) sC.value = 0;
+  if (sW) sW.value = 0;
+
+  applyCameraFxToLiveView();
+  showToast('Semua filter & efek kamera direset ke Natural!');
+}
+
+function getActiveCameraFilterString() {
+  const fx = state.cameraFx;
+  let b = 100 + (fx.brightness || 0);
+  let c = 100 + (fx.contrast || 0);
+  let s = 100 + (fx.warmth || 0);
+
+  let presetFilter = '';
+  if (fx.filter === 'bw') {
+    presetFilter = 'grayscale(100%) ';
+    c = Math.round(c * 1.3);
+    b = Math.round(b * 0.95);
+  } else if (fx.filter === 'kpastel') {
+    presetFilter = 'sepia(10%) hue-rotate(-6deg) ';
+    b = Math.round(b * 1.08);
+    c = Math.round(c * 0.96);
+    s = Math.round(s * 1.15);
+  } else if (fx.filter === 'warm') {
+    presetFilter = 'sepia(35%) hue-rotate(-12deg) ';
+    b = Math.round(b * 1.02);
+    c = Math.round(c * 1.1);
+    s = Math.round(s * 1.1);
+  } else if (fx.filter === 'vintage') {
+    presetFilter = 'sepia(45%) ';
+    b = Math.round(b * 0.95);
+    c = Math.round(c * 1.18);
+    s = Math.round(s * 0.85);
+  } else if (fx.filter === 'cyber') {
+    presetFilter = 'hue-rotate(15deg) ';
+    b = Math.round(b * 1.05);
+    c = Math.round(c * 1.2);
+    s = Math.round(s * 1.65);
+  } else if (fx.filter === 'cool') {
+    presetFilter = 'hue-rotate(175deg) ';
+    b = Math.round(b * 1.02);
+    c = Math.round(c * 1.05);
+    s = Math.round(s * 0.95);
+  } else if (fx.filter === 'cinematic') {
+    presetFilter = 'sepia(18%) hue-rotate(5deg) ';
+    b = Math.round(b * 0.96);
+    c = Math.round(c * 1.25);
+    s = Math.round(s * 1.2);
+  }
+
+  let filterStr = `${presetFilter}brightness(${b}%) contrast(${c}%) saturate(${s}%)`;
+  if (fx.bloom) {
+    filterStr += ' drop-shadow(0 0 8px rgba(255,255,255,0.4))';
+  }
+  return filterStr.trim();
+}
+
+function applyCameraFxToLiveView() {
+  const filterStr = getActiveCameraFilterString();
+  const video = document.getElementById('cameraVideo');
+  const canvas = document.getElementById('cameraCanvasFallback');
+  if (video) video.style.filter = filterStr;
+  if (canvas) canvas.style.filter = filterStr;
+
+  const fx = state.cameraFx;
+  const vignette = document.getElementById('vignetteOverlay');
+  if (vignette) vignette.style.display = fx.vignette ? 'block' : 'none';
+
+  const grain = document.getElementById('grainOverlay');
+  if (grain) grain.style.display = fx.grain ? 'block' : 'none';
+
+  const lightLeak = document.getElementById('lightLeakOverlay');
+  if (lightLeak) lightLeak.style.display = fx.lightLeak ? 'block' : 'none';
+
+  const bloom = document.getElementById('bloomOverlay');
+  if (bloom) bloom.style.display = fx.bloom ? 'block' : 'none';
+
+  const dateStamp = document.getElementById('dateStampOverlay');
+  if (dateStamp) {
+    dateStamp.style.display = fx.dateStamp ? 'block' : 'none';
+    const dateText = document.getElementById('dateStampText');
+    if (dateText) {
+      const now = new Date();
+      const yy = String(now.getFullYear()).slice(-2);
+      const mm = String(now.getMonth() + 1).padStart(2, '0');
+      const dd = String(now.getDate()).padStart(2, '0');
+      dateText.textContent = `'${yy} ${mm} ${dd}`;
+    }
+  }
+
+  const stickerOverlay = document.getElementById('stickerOverlay');
+  if (stickerOverlay) {
+    if (fx.sticker && fx.sticker !== 'none') {
+      stickerOverlay.style.display = 'block';
+      renderStickerOverlayDOM(stickerOverlay, fx.sticker);
+    } else {
+      stickerOverlay.style.display = 'none';
+      stickerOverlay.innerHTML = '';
+    }
+  }
+
+  const bVal = document.getElementById('valCamBrightness');
+  if (bVal) bVal.textContent = (fx.brightness > 0 ? '+' : '') + fx.brightness;
+  const cVal = document.getElementById('valCamContrast');
+  if (cVal) cVal.textContent = (fx.contrast > 0 ? '+' : '') + fx.contrast;
+  const wVal = document.getElementById('valCamWarmth');
+  if (wVal) wVal.textContent = (fx.warmth > 0 ? '+' : '') + fx.warmth;
+
+  const badge = document.getElementById('activeFilterBadge');
+  if (badge) {
+    const names = {
+      none: 'NATURAL',
+      bw: 'B&W NOIR',
+      kpastel: 'K-PASTEL',
+      warm: 'WARM RETRO',
+      vintage: 'VINTAGE',
+      cyber: 'CYBER GLOW',
+      cool: 'COOL BLUE',
+      cinematic: 'CINEMATIC'
+    };
+    badge.textContent = names[fx.filter] || 'NATURAL';
+  }
+}
+
+function renderStickerOverlayDOM(container, type) {
+  if (type === 'sparkles') {
+    container.innerHTML = `
+      <span class="sticker-item sticker-item-sparkle" style="top:14px; left:18px;">✨</span>
+      <span class="sticker-item sticker-item-sparkle" style="top:20px; right:20px;">⭐</span>
+      <span class="sticker-item sticker-item-sparkle" style="bottom:22px; left:20px;">✦</span>
+      <span class="sticker-item sticker-item-sparkle" style="bottom:18px; right:22%;">✨</span>
+    `;
+  } else if (type === 'hearts') {
+    container.innerHTML = `
+      <span class="sticker-item sticker-item-heart" style="top:14px; left:20px;">💕</span>
+      <span class="sticker-item sticker-item-heart" style="top:18px; right:22px;">💖</span>
+      <span class="sticker-item sticker-item-heart" style="bottom:20px; left:22px;">🤍</span>
+      <span class="sticker-item sticker-item-heart" style="bottom:20px; right:25%;">💗</span>
+    `;
+  } else if (type === 'cat') {
+    container.innerHTML = `
+      <div class="sticker-cat-doodle">🐱 PHOTOBOOTH TIME 🐱</div>
+      <span class="sticker-item" style="top:14px; left:16px; font-size:1.6rem;">🐾</span>
+      <span class="sticker-item" style="top:14px; right:16px; font-size:1.6rem;">🐾</span>
+    `;
+  } else if (type === 'stamp') {
+    container.innerHTML = `
+      <div class="sticker-stamp-badge">PHOTOBOOTH // STUDIO LIVE ★</div>
+    `;
+  }
+}
+
+function applyActiveFxToCanvas(ctx, width, height) {
+  const fx = state.cameraFx;
+
+  if (fx.vignette) {
+    ctx.save();
+    const radius = Math.max(width, height) * 0.75;
+    const grad = ctx.createRadialGradient(width / 2, height / 2, radius * 0.35, width / 2, height / 2, radius);
+    grad.addColorStop(0, 'rgba(0, 0, 0, 0)');
+    grad.addColorStop(0.65, 'rgba(0, 0, 0, 0.25)');
+    grad.addColorStop(1, 'rgba(0, 0, 0, 0.72)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, width, height);
+    ctx.restore();
+  }
+
+  if (fx.lightLeak) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'screen';
+    const grad = ctx.createLinearGradient(0, 0, width * 0.45, height * 0.45);
+    grad.addColorStop(0, 'rgba(255, 125, 40, 0.42)');
+    grad.addColorStop(0.35, 'rgba(255, 215, 90, 0.22)');
+    grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, width, height);
+    ctx.restore();
+  }
+
+  if (fx.grain) {
+    ctx.save();
+    drawNoiseToCanvas(ctx, width, height, 0.07);
+    ctx.restore();
+  }
+
+  if (fx.dateStamp) {
+    ctx.save();
+    const now = new Date();
+    const yy = String(now.getFullYear()).slice(-2);
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    const dateStr = `'${yy} ${mm} ${dd}`;
+
+    const fontSize = Math.max(18, Math.round(height * 0.04));
+    ctx.font = `800 ${fontSize}px "Space Mono", monospace`;
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'bottom';
+    ctx.shadowColor = 'rgba(255, 110, 0, 0.85)';
+    ctx.shadowBlur = 10;
+    ctx.fillStyle = '#FF7700';
+    ctx.fillText(dateStr, width - Math.round(width * 0.04), height - Math.round(height * 0.04));
+    ctx.restore();
+  }
+
+  if (fx.sticker && fx.sticker !== 'none') {
+    drawStickerToCanvas(ctx, width, height, fx.sticker);
+  }
+}
+
+function drawNoiseToCanvas(ctx, width, height, alpha) {
+  const noiseCanvas = document.createElement('canvas');
+  noiseCanvas.width = 120;
+  noiseCanvas.height = 120;
+  const nCtx = noiseCanvas.getContext('2d');
+  const imgData = nCtx.createImageData(120, 120);
+  const data = imgData.data;
+  for (let i = 0; i < data.length; i += 4) {
+    const val = Math.floor(Math.random() * 255);
+    data[i] = val;
+    data[i + 1] = val;
+    data[i + 2] = val;
+    data[i + 3] = Math.floor(255 * alpha);
+  }
+  nCtx.putImageData(imgData, 0, 0);
+
+  ctx.save();
+  ctx.globalCompositeOperation = 'overlay';
+  const pattern = ctx.createPattern(noiseCanvas, 'repeat');
+  ctx.fillStyle = pattern;
+  ctx.fillRect(0, 0, width, height);
+  ctx.restore();
+}
+
+function drawStickerToCanvas(ctx, width, height, type) {
+  ctx.save();
+  if (type === 'sparkles') {
+    const sz = Math.max(24, Math.round(width * 0.05));
+    ctx.font = `${sz}px sans-serif`;
+    ctx.fillText('✨', width * 0.03, height * 0.08);
+    ctx.fillText('⭐', width * 0.92, height * 0.09);
+    ctx.fillText('✦', width * 0.04, height * 0.94);
+    ctx.fillText('✨', width * 0.75, height * 0.94);
+  } else if (type === 'hearts') {
+    const sz = Math.max(24, Math.round(width * 0.05));
+    ctx.font = `${sz}px sans-serif`;
+    ctx.fillText('💕', width * 0.03, height * 0.08);
+    ctx.fillText('💖', width * 0.92, height * 0.09);
+    ctx.fillText('🤍', width * 0.04, height * 0.94);
+    ctx.fillText('💗', width * 0.72, height * 0.94);
+  } else if (type === 'cat') {
+    const sz = Math.max(20, Math.round(width * 0.04));
+    ctx.font = `${sz}px sans-serif`;
+    ctx.fillText('🐾', width * 0.03, height * 0.08);
+    ctx.fillText('🐾', width * 0.92, height * 0.08);
+
+    const bannerFont = Math.max(14, Math.round(width * 0.026));
+    ctx.font = `bold ${bannerFont}px "Space Mono", monospace`;
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#FDA4AF';
+    ctx.shadowColor = 'rgba(0,0,0,0.5)';
+    ctx.shadowBlur = 4;
+    ctx.fillText('🐱 PHOTOBOOTH TIME 🐱', width / 2, height * 0.06);
+  } else if (type === 'stamp') {
+    ctx.save();
+    ctx.translate(width * 0.82, height * 0.07);
+    ctx.rotate((3 * Math.PI) / 180);
+    const badgeFont = Math.max(12, Math.round(width * 0.022));
+    ctx.font = `bold ${badgeFont}px "Space Mono", monospace`;
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#FCD34D';
+    ctx.fillText('PHOTOBOOTH ★ LIVE', 0, 0);
+    ctx.restore();
+  }
+  ctx.restore();
+}
+
 // --- 4. DUAL 3x1 PHOTO STRIPS & TEMPLATES MANAGEMENT ---
 function toggleLinkTemplates(link) {
   state.strip.linkTemplates = link;
@@ -1069,9 +1443,75 @@ function handleCustomTemplateUpload(event) {
   reader.readAsDataURL(file);
 }
 
+function setLayoutFormat(format) {
+  state.strip.layoutFormat = format;
+  const btn4R = document.getElementById('btnLayout4R');
+  const btnDual = document.getElementById('btnLayoutDual');
+  const mount4R = document.getElementById('mount4R');
+  const mountDual = document.getElementById('mountDual');
+  const sec4R = document.getElementById('sec4RFrameControls');
+  const titleEl = document.getElementById('layoutHeaderTitle');
+  const badgeEl = document.getElementById('layoutBadgeCount');
+  const footerLabel = document.getElementById('layoutFormatFooterLabel');
+
+  if (btn4R) btn4R.classList.toggle('active', format === '4r');
+  if (btnDual) btnDual.classList.toggle('active', format === 'dual');
+  if (mount4R) mount4R.style.display = format === '4r' ? 'flex' : 'none';
+  if (mountDual) mountDual.style.display = format === 'dual' ? 'flex' : 'none';
+  if (sec4R) sec4R.style.display = format === '4r' ? 'block' : 'none';
+
+  if (format === '4r') {
+    if (titleEl) titleEl.textContent = 'PREVIEW LAYOUT 4R (102 × 152 MM)';
+    if (badgeEl) badgeEl.textContent = '3 FOTO VERTIKAL';
+    if (footerLabel) footerLabel.textContent = 'FORMAT CETAK: 4R (102 × 152 mm // 1205 × 1795 px @ 300 DPI)';
+  } else {
+    if (titleEl) titleEl.textContent = 'PREVIEW DUAL STRIP 3x1 (CETAK 2 BINGKAI)';
+    if (badgeEl) badgeEl.textContent = 'TOTAL 6 FOTO';
+    if (footerLabel) footerLabel.textContent = 'FORMAT CETAK: 4x6" (DUAL 2x6 CUT @ 300 DPI)';
+  }
+
+  renderLayoutStrip();
+}
+
+function update4RFrameDimensions() {
+  const w = parseInt(document.getElementById('slider4RWidth')?.value || 90, 10);
+  const h = parseInt(document.getElementById('slider4RHeight')?.value || 40, 10);
+  const gap = parseInt(document.getElementById('slider4RGap')?.value || 6, 10);
+  const rad = parseInt(document.getElementById('slider4RRadius')?.value || 8, 10);
+
+  state.fourR = { widthMm: w, heightMm: h, gapMm: gap, radiusPx: rad };
+
+  const wDisplay = document.getElementById('val4RWidth');
+  if (wDisplay) wDisplay.textContent = `${w} mm (${Math.round(w * 11.811)} px)`;
+  const hDisplay = document.getElementById('val4RHeight');
+  if (hDisplay) hDisplay.textContent = `${h} mm (${Math.round(h * 11.811)} px)`;
+  const gDisplay = document.getElementById('val4RGap');
+  if (gDisplay) gDisplay.textContent = `${gap} mm (${Math.round(gap * 11.811)} px)`;
+  const rDisplay = document.getElementById('val4RRadius');
+  if (rDisplay) rDisplay.textContent = `${rad} px`;
+
+  const stack = document.getElementById('fourRStack');
+  if (stack) {
+    // In DOM preview, sheet is 320px wide representing 102mm -> scale ~3.137 px/mm
+    const scale = 320 / 102;
+    stack.style.gap = `${gap * scale}px`;
+
+    document.querySelectorAll('.four-r-slot').forEach((slot) => {
+      slot.style.width = `${Math.min(96, Math.max(70, w)) * scale}px`;
+      slot.style.height = `${Math.min(48, Math.max(28, h)) * scale}px`;
+      slot.style.borderRadius = `${rad}px`;
+    });
+  }
+
+  if (state.currentScreen === 'print') {
+    updatePrintPreview();
+  }
+}
+
 function renderLayoutStrip() {
   const strip1Box = document.getElementById('photoStrip1');
   const strip2Box = document.getElementById('photoStrip2');
+  const sheet4R = document.getElementById('photoSheet4R');
 
   const tpl1 = PRINT_TEMPLATES[state.strip.templateId1 || 1] || PRINT_TEMPLATES[1];
   const tpl2 = PRINT_TEMPLATES[state.strip.templateId2 || state.strip.templateId1 || 1] || PRINT_TEMPLATES[1];
@@ -1087,6 +1527,33 @@ function renderLayoutStrip() {
         slots.push(sel[i % sel.length]);
       }
       state.strip.photoIds = slots;
+    }
+  }
+
+  // 4R Sheet Preview Styling
+  if (sheet4R) {
+    if (state.customTemplateDataUrl) {
+      sheet4R.style.backgroundImage = `url(${state.customTemplateDataUrl})`;
+    } else {
+      sheet4R.style.backgroundImage = `url(${tpl1.src})`;
+    }
+    sheet4R.style.backgroundSize = 'cover';
+    sheet4R.style.backgroundPosition = 'center';
+    sheet4R.style.backgroundColor = tpl1.bg || '#FFFFFF';
+  }
+
+  // Populate 4R Slots 0-2 (3 Photos)
+  for (let i = 0; i < 3; i++) {
+    const img4R = document.getElementById(`fourRImg${i}`);
+    if (!img4R) continue;
+    const photoId = state.strip.photoIds[i];
+    const photo = state.photos.find((p) => p.id === photoId);
+    if (photo) {
+      img4R.src = photo.url;
+      img4R.style.display = 'block';
+    } else {
+      img4R.src = '';
+      img4R.style.display = 'none';
     }
   }
 
@@ -1114,7 +1581,7 @@ function renderLayoutStrip() {
     strip2Box.style.backgroundColor = tpl2.bg;
   }
 
-  // Populate Photo Slots 0-5
+  // Populate Dual Strip Photo Slots 0-5
   for (let i = 0; i < 6; i++) {
     const imgEl = document.getElementById(`stripImg${i}`);
     if (!imgEl) continue;
@@ -1139,6 +1606,8 @@ function renderLayoutStrip() {
   const s1 = document.getElementById('strip1DateDisplay');
   const t2 = document.getElementById('strip2TextDisplay');
   const s2 = document.getElementById('strip2DateDisplay');
+  const t4R = document.getElementById('fourRTextDisplay');
+  const s4R = document.getElementById('fourRDateDisplay');
 
   if (t1) {
     t1.textContent = titleVal;
@@ -1158,6 +1627,15 @@ function renderLayoutStrip() {
     s2.style.color = tpl2.isDark ? '#94A3B8' : '#64748B';
   }
 
+  if (t4R) {
+    t4R.textContent = titleVal;
+    t4R.style.color = tpl1.isDark ? '#FFFFFF' : '#0F172A';
+  }
+  if (s4R) {
+    s4R.textContent = subVal;
+    s4R.style.color = tpl1.isDark ? '#94A3B8' : '#64748B';
+  }
+
   // If currently in print screen, refresh print preview too
   if (state.currentScreen === 'print') {
     updatePrintPreview();
@@ -1174,6 +1652,8 @@ function updateDualStripTexts() {
   const s1 = document.getElementById('strip1DateDisplay');
   const t2 = document.getElementById('strip2TextDisplay');
   const s2 = document.getElementById('strip2DateDisplay');
+  const t4R = document.getElementById('fourRTextDisplay');
+  const s4R = document.getElementById('fourRDateDisplay');
   const rt = document.getElementById('reelTitleDisplay');
   const rs = document.getElementById('reelSubDisplay');
 
@@ -1181,6 +1661,8 @@ function updateDualStripTexts() {
   if (s1) s1.textContent = subVal;
   if (t2) t2.textContent = titleVal;
   if (s2) s2.textContent = subVal;
+  if (t4R) t4R.textContent = titleVal;
+  if (s4R) s4R.textContent = subVal;
   if (rt) rt.textContent = titleVal;
   if (rs) rs.textContent = subVal;
 
@@ -1268,8 +1750,143 @@ function loadImagePromise(src) {
   });
 }
 
-// --- 5. PRINT STAGE WITH LIVE ACCURATE DUAL-STRIP (4x6 @ 300 DPI) PREVIEW ---
+// --- 5. PRINT STAGE WITH 4R (102x152mm // 1205x1795 @ 300 DPI) & DUAL STRIP PREVIEW ---
 async function generateHighResStripCanvas() {
+  if (state.strip.layoutFormat === '4r') {
+    return await generateHighRes4RCanvas();
+  } else {
+    return await generateHighResDualStripCanvas();
+  }
+}
+
+// Generates 4R paper print layout (102 × 152 mm) @ 300 DPI (1205 × 1795 px)
+// 3 vertical portrait photos (~90 × 40 mm) with safe margins, equal spacing and customizable frame sizes
+async function generateHighRes4RCanvas() {
+  const canvas = document.createElement('canvas');
+  const width = 1205;  // 102 mm at 300 DPI
+  const height = 1795; // 152 mm at 300 DPI
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d');
+
+  // Fill Background Base
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fillRect(0, 0, width, height);
+
+  const tpl = PRINT_TEMPLATES[state.strip.templateId1 || 1] || PRINT_TEMPLATES[1];
+  const tplSrc = state.customTemplateDataUrl || tpl.src;
+  const tplImg = await loadImagePromise(tplSrc);
+
+  if (tplImg && tplImg.naturalWidth > 0) {
+    ctx.drawImage(tplImg, 0, 0, width, height);
+  } else {
+    ctx.fillStyle = tpl.bg || '#FFFFFF';
+    ctx.fillRect(0, 0, width, height);
+  }
+
+  // Draw Safe Margins Accent & Decorative Borders
+  ctx.save();
+  ctx.strokeStyle = tpl.isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(15, 23, 42, 0.08)';
+  ctx.lineWidth = 4;
+  ctx.strokeRect(36, 36, width - 72, height - 72);
+  ctx.restore();
+
+  // Header Title at Top
+  const titleVal = state.strip.title || 'SATYA MEMORIES';
+  const subVal = state.strip.subtitle || 'STUDIO EDITION // 2026-X';
+
+  ctx.save();
+  ctx.textAlign = 'center';
+  ctx.fillStyle = tpl.isDark ? '#FFFFFF' : '#0F172A';
+  ctx.font = 'bold 42px "Cabinet Grotesk", sans-serif';
+  ctx.fillText(titleVal, width / 2, 120);
+
+  ctx.fillStyle = tpl.isDark ? '#94A3B8' : '#64748B';
+  ctx.font = '600 22px "Space Mono", monospace';
+  ctx.fillText('STUDIO PHOTOBOOTH // 4R PRINT EDITION', width / 2, 160);
+  ctx.restore();
+
+  // 3 Vertical Portrait Photos: Flexible/Resizable Frame around each photo
+  // Standard 4R: 102 mm = 1205 px -> 11.813 px/mm
+  const pxPerMm = 11.813;
+  const cfg = state.fourR || { widthMm: 90, heightMm: 40, gapMm: 6, radiusPx: 8 };
+
+  // Calculate pixel sizes from customizable mm settings
+  const frameWidthPx = Math.round(Math.min(96, Math.max(70, cfg.widthMm)) * pxPerMm);   // ~1063 px for 90mm
+  const frameHeightPx = Math.round(Math.min(46, Math.max(30, cfg.heightMm)) * pxPerMm); // ~472 px for 40mm
+  const gapPx = Math.round(Math.min(14, Math.max(2, cfg.gapMm)) * pxPerMm);             // ~71 px for 6mm
+  const radiusPx = Math.round(cfg.radiusPx * (width / 320));
+
+  // Compute safe vertical distribution centered inside available paper area
+  const contentStartY = 200;
+  const contentEndY = 1620;
+  const availableHeight = contentEndY - contentStartY;
+  const totalStackHeight = (3 * frameHeightPx) + (2 * gapPx);
+  const startY = Math.round(contentStartY + Math.max(0, (availableHeight - totalStackHeight) / 2));
+  const startX = Math.round((width - frameWidthPx) / 2);
+
+  for (let i = 0; i < 3; i++) {
+    const photoId = state.strip.photoIds[i];
+    const photo = state.photos.find((p) => p.id === photoId);
+    const frameY = startY + i * (frameHeightPx + gapPx);
+
+    // Decorative frame background shadow & border
+    ctx.save();
+    ctx.fillStyle = tpl.isDark ? '#1E293B' : '#F1F5F9';
+    drawRoundedRect(ctx, startX - 8, frameY - 8, frameWidthPx + 16, frameHeightPx + 16, radiusPx + 4);
+    ctx.fill();
+    ctx.restore();
+
+    if (photo) {
+      const img = await loadImagePromise(photo.url);
+      if (img) {
+        ctx.save();
+        drawRoundedRect(ctx, startX, frameY, frameWidthPx, frameHeightPx, radiusPx);
+        ctx.drawImage(img, startX, frameY, frameWidthPx, frameHeightPx);
+        ctx.restore();
+      }
+    } else {
+      ctx.save();
+      ctx.fillStyle = '#0F172A';
+      drawRoundedRect(ctx, startX, frameY, frameWidthPx, frameHeightPx, radiusPx);
+      ctx.fill();
+
+      ctx.fillStyle = '#64748B';
+      ctx.font = 'bold 24px "Space Mono", monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(`SLOT 0${i + 1} - EMPTY`, width / 2, frameY + frameHeightPx / 2);
+      ctx.restore();
+    }
+
+    // Outer frame stroke outline
+    ctx.save();
+    ctx.strokeStyle = tpl.isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.15)';
+    ctx.lineWidth = 3;
+    if (typeof ctx.roundRect === 'function') {
+      ctx.beginPath();
+      ctx.roundRect(startX, frameY, frameWidthPx, frameHeightPx, radiusPx);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  // Footer Metadata text
+  ctx.save();
+  ctx.textAlign = 'center';
+  ctx.fillStyle = tpl.isDark ? '#E2E8F0' : '#1E293B';
+  ctx.font = 'bold 30px "Space Mono", monospace';
+  ctx.fillText(subVal, width / 2, 1690);
+
+  ctx.fillStyle = tpl.isDark ? '#64748B' : '#94A3B8';
+  ctx.font = '500 18px "Space Mono", monospace';
+  ctx.fillText('4R LAB QUALITY // 102x152mm // 300 DPI // SENSOR RAW', width / 2, 1726);
+  ctx.restore();
+
+  return canvas;
+}
+
+// Generates Dual 3x1 Strips (1200x1800 px @ 300 DPI)
+async function generateHighResDualStripCanvas() {
   const canvas = document.createElement('canvas');
   const width = 1200;  // 4 inches at 300 DPI
   const height = 1800; // 6 inches at 300 DPI
@@ -1381,21 +1998,15 @@ async function generateHighResStripCanvas() {
   ctx.fillText(subVal, 900, 1634);
   ctx.restore();
 
-  // 3. Draw Cut Line Marker Guide (Middle at x = 600)
+  // Center Cut Separator Line
   ctx.save();
-  ctx.setLineDash([14, 10]);
-  ctx.strokeStyle = 'rgba(148, 163, 184, 0.45)';
+  ctx.strokeStyle = '#CBD5E1';
   ctx.lineWidth = 2;
+  ctx.setLineDash([12, 10]);
   ctx.beginPath();
   ctx.moveTo(600, 0);
   ctx.lineTo(600, 1800);
   ctx.stroke();
-
-  ctx.fillStyle = 'rgba(148, 163, 184, 0.7)';
-  ctx.font = '16px "Space Mono", monospace';
-  ctx.textAlign = 'center';
-  ctx.fillText('✂ 2x6 CUT LINE', 600, 36);
-  ctx.fillText('✂ 2x6 CUT LINE', 600, 1774);
   ctx.restore();
 
   return canvas;
@@ -1425,11 +2036,50 @@ async function updatePrintPreview() {
 function updatePrintCopiesInfo() {
   const copiesInput = document.getElementById('inputCopies');
   const copies = parseInt(copiesInput?.value || 1, 10);
-  const totalStrips = copies * 2;
   const display = document.getElementById('totalStripsDisplay');
   if (display) {
-    display.textContent = `${totalStrips} Strip Foto (3x1) (${copies} Lembar Kertas 4x6")`;
+    if (state.strip.layoutFormat === '4r') {
+      display.textContent = `${copies} Lembar Kertas 4R (102 × 152 mm) @ 300 DPI`;
+    } else {
+      const totalStrips = copies * 2;
+      display.textContent = `${totalStrips} Strip Foto (3x1) (${copies} Lembar Kertas 4x6")`;
+    }
   }
+}
+
+function requestPrintConfirmation() {
+  const modal = document.getElementById('printNoticeModal');
+  const copies = parseInt(document.getElementById('inputCopies')?.value || 1, 10);
+  const sessEl = document.getElementById('noticeSessionId');
+  const fmtEl = document.getElementById('noticeLayoutFormat');
+  const copiesEl = document.getElementById('noticeCopiesCount');
+
+  if (sessEl) sessEl.textContent = state.currentSessionId || 'Default Session';
+  if (fmtEl) {
+    fmtEl.textContent = state.strip.layoutFormat === '4r'
+      ? '4R (102 × 152 mm) // 3 Foto Vertikal (300 DPI)'
+      : 'Dual Strip (4x6" Postcard // 2× 2x6 Cut)';
+  }
+  if (copiesEl) {
+    copiesEl.textContent = `${copies} Lembar (${state.strip.layoutFormat === '4r' ? copies + ' Lembar 4R' : (copies * 2) + ' Strip Foto'})`;
+  }
+
+  if (modal) {
+    modal.classList.remove('hidden');
+    if (window.gsap) {
+      gsap.fromTo('#printNoticeCardElement', { scale: 0.9, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.3, ease: 'back.out(1.2)' });
+    }
+  }
+}
+
+function closePrintNoticeModal() {
+  const modal = document.getElementById('printNoticeModal');
+  if (modal) modal.classList.add('hidden');
+}
+
+async function confirmAndExecutePrint() {
+  closePrintNoticeModal();
+  await dispatchPrintJob();
 }
 
 async function dispatchPrintJob() {
@@ -1437,9 +2087,9 @@ async function dispatchPrintJob() {
   if (bar) bar.style.display = 'block';
 
   const copies = parseInt(document.getElementById('inputCopies')?.value || 1, 10);
-  const size = document.getElementById('selectPaperSize')?.value || '4x6';
+  const size = document.getElementById('selectPaperSize')?.value || (state.strip.layoutFormat === '4r' ? '4R' : '4x6');
 
-  showToast(`Mengirim ${copies} lembar (${copies * 2} strip 3x1) ke printer...`);
+  showToast(`Mengirim ${copies} lembar ke printer...`);
 
   const canvas = await generateHighResStripCanvas();
   const stripBase64 = canvas.toDataURL('image/jpeg', 0.95);
@@ -1449,7 +2099,7 @@ async function dispatchPrintJob() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        layoutId: `dual_strip_tpl_${state.strip.templateId1}_${state.strip.templateId2}`,
+        layoutId: `${state.strip.layoutFormat}_tpl_${state.strip.templateId1}`,
         templateId: state.strip.templateId1,
         templateId2: state.strip.templateId2,
         printerSettings: { copies, paperSize: size }
@@ -1458,7 +2108,13 @@ async function dispatchPrintJob() {
     const result = await res.json();
     setTimeout(() => {
       if (bar) bar.style.display = 'none';
-      showToast(`Cetak ${copies * 2} strip berhasil! Silakan ambil photo strip Anda.`, 'success');
+      showToast(`Cetak berhasil! Silakan ambil hasil cetak Anda di tray.`, 'success');
+
+      // User requirement: When user finishes printing, automatically prompt new session to photograph again
+      setTimeout(() => {
+        openNewSessionModal();
+        showToast('Sesi cetak selesai. Silakan mulai sesi foto baru untuk tamu berikutnya!', 'info');
+      }, 1000);
     }, 2800);
   } catch (err) {
     if (bar) bar.style.display = 'none';

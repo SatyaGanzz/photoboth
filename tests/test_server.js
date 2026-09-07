@@ -154,18 +154,19 @@ async function runTests() {
   await assert('Printers List & Send /api/print/send (Authenticated)', async () => {
     const res = await request(
       { hostname: 'localhost', path: '/api/print/send', method: 'POST' },
-      { layoutId: 'layout_test', printerSettings: { copies: 1, paperSize: '4x6' } },
+      { layoutId: '4r_tpl_1', printerSettings: { copies: 1, paperSize: '4R' } },
       authToken
     );
     if (res.status !== 200 || res.data.data.status !== 'printing') throw new Error('Print job send failed');
   });
 
-  // 11. Static frontend assets
-  await assert('Frontend UI Serving /index.html with Login Modal', async () => {
+  // 11. Static frontend assets & 4R + Photobooth Filters verification
+  await assert('Frontend UI Serving /index.html with Notice Alert, 4R & Photobooth Filters', async () => {
     const res = await request({ hostname: 'localhost', path: '/', method: 'GET' });
-    if (res.status !== 200 || typeof res.data !== 'string' || !res.data.includes('authModal')) {
-      throw new Error('Frontend index.html missing auth modal');
-    }
+    if (res.status !== 200 || typeof res.data !== 'string') throw new Error('Failed to load index.html');
+    if (!res.data.includes('printNoticeModal')) throw new Error('Missing printNoticeModal in index.html');
+    if (!res.data.includes('btnLayout4R')) throw new Error('Missing 4R layout selector in index.html');
+    if (!res.data.includes('pb-filter-grid')) throw new Error('Missing photobooth filter grid in index.html');
   });
 
   // 12. Template Asset Serving

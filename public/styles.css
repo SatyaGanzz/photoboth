@@ -635,6 +635,109 @@ body {
   z-index: 1;
 }
 
+/* Photobooth Live Viewfinder Overlays */
+.fx-vignette-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 3;
+  background: radial-gradient(ellipse at center, rgba(0,0,0,0) 45%, rgba(0,0,0,0.65) 100%);
+  transition: opacity 0.25s ease;
+}
+
+.fx-grain-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 3;
+  opacity: 0.22;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  mix-blend-mode: overlay;
+}
+
+.fx-light-leak-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 3;
+  background: linear-gradient(135deg, rgba(255, 125, 40, 0.42) 0%, rgba(255, 215, 90, 0.22) 32%, transparent 62%);
+  mix-blend-mode: screen;
+}
+
+.fx-bloom-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 3;
+  backdrop-filter: blur(1.5px);
+  background: rgba(255, 235, 230, 0.12);
+  mix-blend-mode: soft-light;
+}
+
+.fx-date-stamp-layer {
+  position: absolute;
+  bottom: 38px;
+  right: 18px;
+  pointer-events: none;
+  z-index: 4;
+  font-family: 'Space Mono', 'JetBrains Mono', monospace;
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #FF7700;
+  text-shadow: 0 0 8px rgba(255, 110, 0, 0.85), 1px 1px 2px #000;
+  letter-spacing: 0.08em;
+}
+
+.fx-sticker-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 4;
+}
+
+.sticker-item {
+  position: absolute;
+  filter: drop-shadow(0 2px 5px rgba(0,0,0,0.4));
+  user-select: none;
+  pointer-events: none;
+}
+
+.sticker-item-sparkle { font-size: 1.8rem; }
+.sticker-item-heart { font-size: 1.8rem; }
+.sticker-cat-doodle {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(4px);
+  color: #FDA4AF;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 4px 14px;
+  border-radius: var(--radius-full);
+  border: 1px solid rgba(253, 164, 175, 0.5);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+
+.sticker-stamp-badge {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: rgba(15, 23, 42, 0.82);
+  backdrop-filter: blur(4px);
+  color: #FCD34D;
+  border: 1.5px dashed #FCD34D;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.62rem;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  letter-spacing: 0.08em;
+  transform: rotate(3deg);
+}
+
 /* Grid & Framing Reticles */
 .viewfinder-grid {
   position: absolute;
@@ -951,7 +1054,7 @@ body {
   font-weight: 700;
 }
 
-/* Look Profile Buttons */
+/* Look Profile Buttons (Legacy) */
 .look-profile-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -963,6 +1066,103 @@ body {
   text-align: center;
   font-size: 0.68rem;
   border-radius: var(--radius-md);
+}
+
+/* =============================================================
+   PHOTOBOOTH FILTERS & EFFECTS SUITE (RIGHT CONSOLE)
+   ============================================================= */
+
+/* Filter Preset Grid (8 looks) */
+.pb-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.pb-filter-btn {
+  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  border-radius: var(--radius-md);
+  text-align: left;
+  transition: all 0.18s ease;
+}
+
+.pb-filter-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.pb-filter-name {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.68rem;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Live Effects Grid */
+.pb-effects-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.pb-effects-grid .pb-effect-toggle:last-child:nth-child(odd) {
+  grid-column: span 2;
+}
+
+.pb-effect-toggle {
+  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.68rem;
+  border-radius: var(--radius-md);
+  justify-content: flex-start;
+}
+
+.pb-fx-icon {
+  font-size: 0.95rem;
+  line-height: 1;
+}
+
+/* Photobooth Stickers / Frame Overlay Grid */
+.pb-stickers-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.pb-sticker-btn {
+  flex: 1 1 calc(33.333% - 6px);
+  padding: 6px 8px;
+  font-size: 0.64rem;
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+}
+
+/* Slider Controls */
+.pb-slider-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 4px;
+}
+
+.pb-slider-title {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  display: flex;
+  justify-content: space-between;
 }
 
 /* Metadata Text Inputs */
@@ -1540,6 +1740,110 @@ body {
   font-size: 0.75rem;
   font-weight: 700;
   color: var(--text-main);
+}
+
+/* ==========================================================================
+   4R PAPER LAYOUT (102 × 152 mm // 1205 × 1795 px @ 300 DPI // 3 PORTRAIT PHOTOS)
+   ========================================================================== */
+.layout-mode-selector-tray {
+  display: flex;
+  gap: 8px;
+  padding: 4px;
+  border-radius: var(--radius-md);
+  margin-bottom: 12px;
+}
+
+.layout-mode-btn {
+  flex: 1;
+  padding: 8px 12px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.four-r-sheet-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.four-r-sheet {
+  width: 320px;
+  aspect-ratio: 102 / 152;
+  background: #FFFFFF;
+  border-radius: var(--radius-sm);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.18);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+  border: 1px solid #CBD5E1;
+  box-sizing: border-box;
+  transition: all 0.2s ease;
+}
+
+.four-r-photos-stack {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-evenly;
+  gap: 8px;
+  flex: 1;
+  padding: 4px 0;
+}
+
+.four-r-slot {
+  position: relative;
+  width: 90%;
+  height: 82px;
+  background: #0F172A;
+  border-radius: 6px;
+  overflow: hidden;
+  cursor: pointer;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.15s ease, width 0.18s ease, height 0.18s ease, border-radius 0.18s ease;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+}
+
+.four-r-slot:hover {
+  transform: scale(1.02);
+}
+
+.four-r-slot img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.four-r-footer {
+  text-align: center;
+  padding-top: 6px;
+  border-top: 1px solid #E2E8F0;
+  width: 100%;
+}
+
+.four-r-footer-text {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: #0F172A;
+}
+
+.four-r-footer-sub {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.55rem;
+  color: #64748B;
+  margin-top: 2px;
 }
 
 /* ==========================================================================
