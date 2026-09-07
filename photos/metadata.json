@@ -1,0 +1,258 @@
+{
+  "photos": {
+    "photo_1788697474070_385940": {
+      "id": "photo_1788697474070_385940",
+      "sessionId": "test_session",
+      "filename": "photo_1788697474070_385940.svg",
+      "filepath": "C:\\Users\\Satya\\Documents\\PROJECT\\PHOTOBOTH\\photos\\test_session\\photo_1788697474070_385940.svg",
+      "url": "/photos/test_session/photo_1788697474070_385940.svg",
+      "thumbnail": "/photos/test_session/photo_1788697474070_385940.svg",
+      "timestamp": "2026-09-06T12:24:34.088Z",
+      "metadata": {
+        "width": 1200,
+        "height": 900,
+        "camera": "Canon EOS DSLR / HD Feed"
+      },
+      "status": "captured",
+      "selected": false
+    },
+    "photo_1788698648382_3198f0": {
+      "id": "photo_1788698648382_3198f0",
+      "sessionId": "default_session",
+      "filename": "photo_1788698648382_3198f0.svg",
+      "filepath": "C:\\Users\\Satya\\Documents\\PROJECT\\PHOTOBOTH\\photos\\default_session\\photo_1788698648382_3198f0.svg",
+      "url": "/photos/default_session/photo_1788698648382_3198f0.svg",
+      "thumbnail": "/photos/default_session/photo_1788698648382_3198f0.svg",
+      "timestamp": "2026-09-06T12:44:08.415Z",
+      "metadata": {
+        "width": 1200,
+        "height": 900,
+        "camera": "Canon EOS DSLR / HD Feed"
+      },
+      "status": "captured",
+      "selected": false
+    },
+    "photo_1788698652239_14253d": {
+      "id": "photo_1788698652239_14253d",
+      "sessionId": "default_session",
+      "filename": "photo_1788698652239_14253d.svg",
+      "filepath": "C:\\Users\\Satya\\Documents\\PROJECT\\PHOTOBOTH\\photos\\default_session\\photo_1788698652239_14253d.svg",
+      "url": "/photos/default_session/photo_1788698652239_14253d.svg",
+      "thumbnail": "/photos/default_session/photo_1788698652239_14253d.svg",
+      "timestamp": "2026-09-06T12:44:12.240Z",
+      "metadata": {
+        "width": 1200,
+        "height": 900,
+        "camera": "Canon EOS DSLR / HD Feed"
+      },
+      "status": "captured",
+      "selected": false
+    },
+    "photo_1788698656016_28388b": {
+      "id": "photo_1788698656016_28388b",
+      "sessionId": "default_session",
+      "filename": "photo_1788698656016_28388b.svg",
+      "filepath": "C:\\Users\\Satya\\Documents\\PROJECT\\PHOTOBOTH\\photos\\default_session\\photo_1788698656016_28388b.svg",
+      "url": "/photos/default_session/photo_1788698656016_28388b.svg",
+      "thumbnail": "/photos/default_session/photo_1788698656016_28388b.svg",
+      "timestamp": "2026-09-06T12:44:16.019Z",
+      "metadata": {
+        "width": 1200,
+        "height": 900,
+        "camera": "Canon EOS DSLR / HD Feed"
+      },
+      "status": "captured",
+      "selected": false
+    },
+    "photo_1788700978004_e2cd9c": {
+      "id": "photo_1788700978004_e2cd9c",
+      "sessionId": "test_session",
+      "filename": "photo_1788700978004_e2cd9c.svg",
+      "filepath": "C:\\Users\\Satya\\Documents\\PROJECT\\PHOTOBOTH\\photos\\test_session\\photo_1788700978004_e2cd9c.svg",
+      "url": "/photos/test_session/photo_1788700978004_e2cd9c.svg",
+      "thumbnail": "/photos/test_session/photo_1788700978004_e2cd9c.svg",
+      "timestamp": "2026-09-06T13:22:58.025Z",
+      "metadata": {
+        "width": 1200,
+        "height": 900,
+        "camera": "Integrated Camera / Studio HD"
+      },
+      "status": "captured",
+      "selected": false
+    },
+    "photo_1788701313074_837004": {
+      "id": "photo_1788701313074_837004",
+      "sessionId": "test_session",
+      "filename": "photo_1788701313074_837004.svg",
+      "filepath": "C:\\Users\\Satya\\Documents\\PROJECT\\PHOTOBOTH\\photos\\test_session\\photo_1788701313074_837004.svg",
+      "url": "/photos/test_session/photo_1788701313074_837004.svg",
+      "thumbnail": "/photos/test_session/photo_1788701313074_837004.svg",
+      "timestamp": "2026-09-06T13:28:33.093Z",
+      "metadata": {
+        "width": 1200,
+        "height": 900,
+        "camera": "Integrated Camera / Studio HD"
+      },
+      "status": "captured",
+      "selected": false
+    },
+    "photo_1788702062346_6f4ecd": {
+      "id": "photo_1788702062346_6f4ecd",
+      "sessionId": "test_session",
+      "filename": "photo_1788702062346_6f4ecd.svg",
+      "filepath": "C:\\Users\\Satya\\Documents\\PROJECT\\PHOTOBOTH\\photos\\test_session\\photo_1788702062346_6f4ecd.svg",
+      "url": "/photos/test_session/photo_1788702062346_6f4ecd.svg",
+      "thumbnail": "/photos/test_session/photo_1788702062346_6f4ecd.svg",
+      "timestamp": "2026-09-06T13:41:02.364Z",
+      "metadata": {
+        "width": 1200,
+        "height": 900,
+        "camera": "Integrated Camera / Studio HD"
+      },
+      "status": "captured",
+      "selected": false
+    },
+    "photo_1788702455166_3a720f": {
+      "id": "photo_1788702455166_3a720f",
+      "sessionId": "SATYA_20260906_200551",
+      "filename": "photo_1788702455166_3a720f.jpg",
+      "filepath": "C:\\Users\\Satya\\Documents\\PROJECT\\PHOTOBOTH\\photos\\SATYA_20260906_200551\\photo_1788702455166_3a720f.jpg",
+      "url": "/photos/SATYA_20260906_200551/photo_1788702455166_3a720f.jpg",
+      "thumbnail": "/photos/SATYA_20260906_200551/photo_1788702455166_3a720f.jpg",
+      "timestamp": "2026-09-06T13:47:35.167Z",
+      "metadata": {
+        "width": 1200,
+        "height": 900,
+        "camera": "Integrated Camera / Studio HD"
+      },
+      "status": "captured",
+      "selected": false
+    },
+    "photo_1788702458443_cd63f0": {
+      "id": "photo_1788702458443_cd63f0",
+      "sessionId": "SATYA_20260906_200551",
+      "filename": "photo_1788702458443_cd63f0.jpg",
+      "filepath": "C:\\Users\\Satya\\Documents\\PROJECT\\PHOTOBOTH\\photos\\SATYA_20260906_200551\\photo_1788702458443_cd63f0.jpg",
+      "url": "/photos/SATYA_20260906_200551/photo_1788702458443_cd63f0.jpg",
+      "thumbnail": "/photos/SATYA_20260906_200551/photo_1788702458443_cd63f0.jpg",
+      "timestamp": "2026-09-06T13:47:38.444Z",
+      "metadata": {
+        "width": 1200,
+        "height": 900,
+        "camera": "Integrated Camera / Studio HD"
+      },
+      "status": "captured",
+      "selected": false
+    },
+    "photo_1788702459789_5d47a2": {
+      "id": "photo_1788702459789_5d47a2",
+      "sessionId": "SATYA_20260906_200551",
+      "filename": "photo_1788702459789_5d47a2.jpg",
+      "filepath": "C:\\Users\\Satya\\Documents\\PROJECT\\PHOTOBOTH\\photos\\SATYA_20260906_200551\\photo_1788702459789_5d47a2.jpg",
+      "url": "/photos/SATYA_20260906_200551/photo_1788702459789_5d47a2.jpg",
+      "thumbnail": "/photos/SATYA_20260906_200551/photo_1788702459789_5d47a2.jpg",
+      "timestamp": "2026-09-06T13:47:39.791Z",
+      "metadata": {
+        "width": 1200,
+        "height": 900,
+        "camera": "Integrated Camera / Studio HD"
+      },
+      "status": "captured",
+      "selected": false
+    }
+  },
+  "layouts": {
+    "layout_1788697474094_e777c1": {
+      "layoutId": "layout_1788697474094_e777c1",
+      "sessionId": "default_session",
+      "photoIds": [
+        "photo_1788697474070_385940"
+      ],
+      "template": "3x1",
+      "padding": 16,
+      "backgroundColor": "#FFFFFF",
+      "url": "/photos/default_session/layout_1788697474094_e777c1.jpg",
+      "preview": "/photos/default_session/layout_1788697474094_e777c1.jpg",
+      "generatedAt": "2026-09-06T12:24:34.094Z"
+    },
+    "layout_1788700978030_dd340c": {
+      "layoutId": "layout_1788700978030_dd340c",
+      "sessionId": "default_session",
+      "photoIds": [
+        "photo_1788700978004_e2cd9c"
+      ],
+      "template": "3x1",
+      "padding": 16,
+      "backgroundColor": "#FFFFFF",
+      "url": "/photos/default_session/layout_1788700978030_dd340c.jpg",
+      "preview": "/photos/default_session/layout_1788700978030_dd340c.jpg",
+      "generatedAt": "2026-09-06T13:22:58.030Z"
+    },
+    "layout_1788701313096_492f94": {
+      "layoutId": "layout_1788701313096_492f94",
+      "sessionId": "default_session",
+      "photoIds": [
+        "photo_1788701313074_837004"
+      ],
+      "template": "3x1",
+      "padding": 16,
+      "backgroundColor": "#FFFFFF",
+      "url": "/photos/default_session/layout_1788701313096_492f94.jpg",
+      "preview": "/photos/default_session/layout_1788701313096_492f94.jpg",
+      "generatedAt": "2026-09-06T13:28:33.096Z"
+    },
+    "layout_1788702062368_ff9774": {
+      "layoutId": "layout_1788702062368_ff9774",
+      "sessionId": "default_session",
+      "photoIds": [
+        "photo_1788702062346_6f4ecd"
+      ],
+      "template": "3x1",
+      "padding": 16,
+      "backgroundColor": "#FFFFFF",
+      "url": "/photos/default_session/layout_1788702062368_ff9774.jpg",
+      "preview": "/photos/default_session/layout_1788702062368_ff9774.jpg",
+      "generatedAt": "2026-09-06T13:41:02.368Z"
+    }
+  },
+  "sessions": {
+    "SATYA_20260906_200551": {
+      "id": "SATYA_20260906_200551",
+      "customerName": "SATYA",
+      "createdAt": "2026-09-06T13:05:51.454Z",
+      "photos": [
+        "photo_1788702455166_3a720f",
+        "photo_1788702458443_cd63f0",
+        "photo_1788702459789_5d47a2"
+      ]
+    },
+    "Satya_20260906_202257": {
+      "id": "Satya_20260906_202257",
+      "customerName": "Satya",
+      "createdAt": "2026-09-06T13:22:57.999Z",
+      "photos": []
+    },
+    "test_session": {
+      "id": "test_session",
+      "customerName": "test",
+      "createdAt": "2026-09-06T13:22:58.025Z",
+      "photos": [
+        "photo_1788700978004_e2cd9c",
+        "photo_1788701313074_837004",
+        "photo_1788702062346_6f4ecd"
+      ]
+    },
+    "Satya_20260906_202833": {
+      "id": "Satya_20260906_202833",
+      "customerName": "Satya",
+      "createdAt": "2026-09-06T13:28:33.069Z",
+      "photos": []
+    },
+    "Satya_20260906_204102": {
+      "id": "Satya_20260906_204102",
+      "customerName": "Satya",
+      "createdAt": "2026-09-06T13:41:02.340Z",
+      "photos": []
+    }
+  }
+}

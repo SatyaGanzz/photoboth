@@ -1,0 +1,7 @@
+config 
+claude mcp add stitch \
+  --transport http \
+  --header "X-Goog-Api-Key: AQ.Ab8RN6J8haaufuzYg6VIUThBLAssesl1iOICNYsCldiKLsNWdg" \
+  https://stitch.googleapis.com/mcp
+
+api : AQ.Ab8RN6J8haaufuzYg6VIUThBLAssesl1iOICNYsCldiKLsNWdg

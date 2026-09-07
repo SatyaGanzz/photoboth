@@ -1,0 +1,31 @@
+<svg width="600" height="1800" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="grad_template3" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stop-color="#FFF1F2"/>
+        <stop offset="100%" stop-color="#FFF1F2"/>
+      </linearGradient>
+    </defs>
+    <rect width="600" height="1800" fill="#FFF1F2"/>
+
+    <!-- Header Branding -->
+    <text x="300" y="55" font-family="Cabinet Grotesk, sans-serif" font-size="20" font-weight="800" fill="#FB7185" text-anchor="middle" letter-spacing="4">PASTEL BLUSH ROMANCE</text>
+
+    <!-- Slot 1 Window Guide (32, 80, 536, 440) -->
+    <rect x="32" y="80" width="536" height="440" rx="16" fill="none" stroke="#FFE4E6" stroke-width="4"/>
+    <rect x="36" y="84" width="528" height="432" rx="14" fill="rgba(0,0,0,0.02)"/>
+
+    <!-- Slot 2 Window Guide (32, 544, 536, 440) -->
+    <rect x="32" y="544" width="536" height="440" rx="16" fill="none" stroke="#FFE4E6" stroke-width="4"/>
+    <rect x="36" y="548" width="528" height="432" rx="14" fill="rgba(0,0,0,0.02)"/>
+
+    <!-- Slot 3 Window Guide (32, 1008, 536, 440) -->
+    <rect x="32" y="1008" width="536" height="440" rx="16" fill="none" stroke="#FFE4E6" stroke-width="4"/>
+    <rect x="36" y="1012" width="528" height="432" rx="14" fill="rgba(0,0,0,0.02)"/>
+
+    <!-- Footer Artwork -->
+    <circle cx="300" cy="1540" r="32" fill="#FB7185" opacity="0.15"/>
+    <circle cx="300" cy="1540" r="14" fill="#FB7185"/>
+    <text x="300" y="1630" font-family="Cabinet Grotesk, sans-serif" font-size="34" font-weight="900" fill="#881337" text-anchor="middle" letter-spacing="2">PASTEL BLUSH ROMANCE</text>
+    <text x="300" y="1680" font-family="JetBrains Mono, monospace" font-size="18" font-weight="700" fill="#FB7185" text-anchor="middle" letter-spacing="3">SPECIAL CELEBRATION</text>
+    <text x="300" y="1730" font-family="JetBrains Mono, monospace" font-size="14" fill="#881337" opacity="0.6" text-anchor="middle">PHOTOBOOTH STUDIO PRO</text>
+  </svg>

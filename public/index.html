@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>STUDIO PHOTOBOOTH // CCU v2.6</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+</head>
+<body>
+
+  <!-- CCU HEADER BAR (NEUMORPHIC DOCK) -->
+  <header class="ccu-header neu-flat">
+    <!-- Brand & System Telemetry -->
+    <div class="ccu-brand" onclick="switchScreen('capture')">
+      <div class="ccu-brand-icon neu-inset">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
+          <path d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
+        </svg>
+      </div>
+      <div>
+        <div class="ccu-brand-title">
+          <h1>STUDIO PHOTOBOOTH</h1>
+          <span class="ccu-version-pill">CCU v2.6</span>
+        </div>
+        <p class="ccu-subtitle">TERMINAL // LIVE CONTROL UNIT</p>
+      </div>
+    </div>
+
+    <!-- Mode Selector Tabs (Neumorphic Inset Tray) -->
+    <nav class="ccu-nav-tray neu-inset">
+      <button class="ccu-nav-tab active" id="tab-capture" onclick="switchScreen('capture')">
+        <span class="tab-indicator-dot"></span>
+        [01 CAMERA]
+      </button>
+      <button class="ccu-nav-tab" id="tab-gallery" onclick="switchScreen('gallery')">
+        [02 GALLERY] (<span id="galleryCount" class="mono">0</span>)
+      </button>
+      <button class="ccu-nav-tab" id="tab-editor" onclick="switchScreen('editor')">
+        [03 EDITOR]
+      </button>
+      <button class="ccu-nav-tab" id="tab-layout" onclick="switchScreen('layout')">
+        [04 3x1 STRIP]
+      </button>
+      <button class="ccu-nav-tab" id="tab-print" onclick="switchScreen('print')">
+        [05 PRINT]
+      </button>
+    </nav>
+
+    <!-- System Badges & Operator Session -->
+    <div class="ccu-header-controls">
+      <!-- Camera Status Beacon -->
+      <div class="ccu-pill-badge neu-inset">
+        <span class="beacon-dot"></span>
+        <span id="cameraStatusText">CAM: ACTIVE</span>
+      </div>
+
+      <!-- New Session Action Button -->
+      <button class="btn-new-session" onclick="openNewSessionModal()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        + Sesi Baru
+      </button>
+
+      <!-- Active Session Badge -->
+      <div id="activeSessionBadge" class="ccu-pill-badge neu-inset" style="display:none; cursor:pointer;" onclick="openNewSessionModal()" title="Klik untuk ganti sesi">
+        <span>SESS:</span> <strong id="activeSessionDisplay" class="mono" style="color:var(--text-main);">Guest_01</strong>
+      </div>
+
+      <!-- Operator Badge -->
+      <div id="authUserBadge" class="ccu-pill-badge neu-flat-sm" style="display:none;">
+        <span>OP:</span> <strong id="authUsernameDisplay" class="mono" style="color:var(--text-main);">Sxatya</strong>
+        <button class="neu-button" style="padding: 2px 6px; font-size: 0.6rem; margin-left: 4px; color: var(--neu-accent);" onclick="logoutUser()" title="End Operator Session">EXIT</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN WORKSPACE VIEWPORT -->
+  <main class="main-viewport">
+
+    <!-- Active Session Banner (Compact for alert notifications) -->
+    <div class="session-hud-banner" id="sessionHudBanner">
+      <div class="hud-details">
+        <h4>Sesi: <span id="bannerSessionName" class="mono">Belum Ada Sesi</span></h4>
+        <p id="bannerSessionMeta">Klik tombol di atas untuk memulai sesi foto baru.</p>
+      </div>
+    </div>
+
+    <!-- ====================================================================
+         SCREEN 1: 3-COLUMN CCU WORKSPACE (CAMERA CAPTURE CONSOLE)
+         ==================================================================== -->
+    <section id="screen-capture" class="screen active">
+      <div class="ccu-workspace-grid">
+
+        <!-- -------------------------------------------------------------
+             LEFT COLUMN: FILM STRIP REEL [3x1]
+             ------------------------------------------------------------- -->
+        <aside class="reel-panel neu-flat">
+          <div class="panel-header">
+            <div class="panel-title">
+              <span class="panel-title-dot" style="background: var(--neu-accent);"></span>
+              <h2>FILM STRIP REEL [3x1]</h2>
+            </div>
+            <span class="panel-badge neu-inset">3 FRAMES</span>
+          </div>
+
+          <!-- Vertical Photobooth Strip Reel Live Preview -->
+          <div class="reel-strip-mount neu-inset">
+            <div class="reel-strip-card" id="liveReelContainer">
+              <!-- Slot 1 -->
+              <div class="reel-frame-slot empty" id="reelSlot0">
+                <span class="reel-slot-num">01</span>
+                <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="stroke-width:1.5;">
+                  <circle cx="12" cy="12" r="9"></circle>
+                  <line x1="12" y1="8" x2="12" y2="16"></line>
+                  <line x1="8" y1="12" x2="16" y2="12"></line>
+                </svg>
+                <span class="mono" style="font-size:0.55rem; font-weight:600;">WAITING SHUTTER</span>
+              </div>
+
+              <!-- Slot 2 -->
+              <div class="reel-frame-slot empty" id="reelSlot1">
+                <span class="reel-slot-num">02</span>
+                <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="stroke-width:1.5;">
+                  <circle cx="12" cy="12" r="9"></circle>
+                  <line x1="12" y1="8" x2="12" y2="16"></line>
+                  <line x1="8" y1="12" x2="16" y2="12"></line>
+                </svg>
+                <span class="mono" style="font-size:0.55rem; font-weight:600;">WAITING SHUTTER</span>
+              </div>
+
+              <!-- Slot 3 -->
+              <div class="reel-frame-slot empty" id="reelSlot2">
+                <span class="reel-slot-num">03</span>
+                <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="stroke-width:1.5;">
+                  <circle cx="12" cy="12" r="9"></circle>
+                  <line x1="12" y1="8" x2="12" y2="16"></line>
+                  <line x1="8" y1="12" x2="16" y2="12"></line>
+                </svg>
+                <span class="mono" style="font-size:0.55rem; font-weight:600;">WAITING SHUTTER</span>
+              </div>
+
+              <!-- Reel Branding Footer -->
+              <div class="reel-strip-footer">
+                <p class="reel-strip-title" id="reelTitleDisplay">SATYA MEMORIES</p>
+                <p class="reel-strip-meta" id="reelSubDisplay">STUDIO EDITION // 2026-X</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Reel Actions -->
+          <div class="reel-actions-grid">
+            <button class="neu-button" onclick="clearLiveReel()">
+              <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+              </svg>
+              CLEAR REEL
+            </button>
+            <button class="neu-button" onclick="switchScreen('layout')">
+              <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                <path d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path>
+              </svg>
+              EDIT STRIP
+            </button>
+          </div>
+        </aside>
+
+        <!-- -------------------------------------------------------------
+             CENTER COLUMN: MAIN VIEWFINDER HERO & SHUTTER TRIGGER
+             ------------------------------------------------------------- -->
+        <main class="viewfinder-panel neu-flat">
+          <!-- Top Telemetry Row -->
+          <div class="telemetry-row">
+            <div class="telemetry-status">
+              <span class="ping-dot"></span>
+              <span>LIVE FEED // SENSOR 01</span>
+            </div>
+            <div class="telemetry-format-pill neu-inset mono">
+              FORMAT: 1920x1080 @ 60HZ
+            </div>
+          </div>
+
+          <!-- Main Viewfinder Surface -->
+          <div class="viewfinder-hero neu-inset-dark" id="viewfinderHero">
+            <video id="cameraVideo" autoplay playsinline muted></video>
+            <canvas id="cameraCanvasFallback" style="display:none;"></canvas>
+
+            <!-- CRT Scanlines simulation layer -->
+            <div class="scanlines" style="position:absolute; inset:0; pointer-events:none; opacity:0.35; z-index:2;"></div>
+
+            <!-- Viewfinder Rule-of-Thirds Grid Overlay -->
+            <div class="viewfinder-grid">
+              <div></div><div></div><div></div>
+              <div></div><div></div><div></div>
+              <div></div><div></div><div></div>
+            </div>
+
+            <!-- Viewfinder Framing Reticle Corners -->
+            <div class="reticle-corner reticle-tl"></div>
+            <div class="reticle-corner reticle-tr"></div>
+            <div class="reticle-corner reticle-bl"></div>
+            <div class="reticle-corner reticle-br"></div>
+
+            <!-- Viewfinder Central Subject Visualizer (Visible if no camera feed) -->
+            <div class="viewfinder-fallback-target" id="viewfinderFallbackTarget">
+              <div class="target-ambient-glow"></div>
+              <div class="target-reticle-ring">
+                <div class="target-inner-orb">
+                  <svg width="44" height="44" fill="currentColor" viewBox="0 0 24 24">
+                    <path clip-rule="evenodd" d="M12 2a5 5 0 100 10 5 5 0 000-10zm-7 18a7 7 0 0114 0H5z" fill-rule="evenodd"></path>
+                  </svg>
+                </div>
+              </div>
+              <div class="target-meta-label">LIVE STUDIO CAMERA FEED</div>
+              <div class="target-sub-label">AUTO-FOCUS: LOCKED // READY</div>
+            </div>
+
+            <!-- Camera Technical Telemetry Bar (Bottom Inset) -->
+            <div class="viewfinder-telemetry-bar">
+              <span>EXP: <strong>1/250s</strong></span>
+              <span class="telemetry-divider">|</span>
+              <span>APER: <strong>f/2.8</strong></span>
+              <span class="telemetry-divider">|</span>
+              <span>ISO: <strong>200</strong></span>
+              <span class="telemetry-divider">|</span>
+              <span style="color:var(--neu-cyan);">WB: <strong>5600K</strong></span>
+              <span class="telemetry-divider">|</span>
+              <span style="color:var(--neu-emerald);"><strong>AF-C ACTIVE</strong></span>
+            </div>
+
+            <!-- Countdown & Flash Overlays -->
+            <div id="countdownOverlay" class="countdown-overlay">3</div>
+            <div id="flashOverlay" class="flash-overlay"></div>
+          </div>
+
+          <!-- Camera Source Selection & Timer Delay Presets -->
+          <div class="camera-options-row">
+            <!-- Camera Device Selector -->
+            <div class="camera-device-container neu-inset">
+              <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" style="color:var(--text-muted); flex-shrink:0;">
+                <path d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+              </svg>
+              <select id="cameraDeviceSelect" onchange="changeCameraDevice(this.value)">
+                <option value="">[CAM 01] Integrated Studio Camera</option>
+              </select>
+            </div>
+
+            <!-- Timer Delay Presets -->
+            <div class="timer-preset-tray neu-inset">
+              <span class="timer-preset-label">TIMER:</span>
+              <button class="neu-button timer-btn" data-delay="0" onclick="setTimerDelay(0, this)">OFF</button>
+              <button class="neu-button timer-btn active" data-delay="3" onclick="setTimerDelay(3, this)">3s</button>
+              <button class="neu-button timer-btn" data-delay="5" onclick="setTimerDelay(5, this)">5s</button>
+              <button class="neu-button timer-btn" data-delay="10" onclick="setTimerDelay(10, this)">10s</button>
+            </div>
+          </div>
+
+          <!-- Primary Execution Shutter Trigger Section -->
+          <div class="shutter-trigger-row">
+            <!-- Big Shutter Trigger Button -->
+            <button class="neu-shutter-btn shutter-trigger-main" id="captureBtn" onclick="triggerCountdownCapture()">
+              <div class="shutter-pulse-circle">
+                <div class="shutter-pulse-dot"></div>
+              </div>
+              <span>EXECUTE SHUTTER [SPACE]</span>
+            </button>
+
+            <!-- 3-Burst Sequence Trigger Button -->
+            <button class="neu-button burst-trigger-btn" onclick="triggerBurstCapture()">
+              <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                <path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+              </svg>
+              <span>3-BURST AUTO</span>
+            </button>
+          </div>
+
+          <!-- Keyboard Instruction Tip -->
+          <div class="keyboard-shortcut-hint">
+            COMMAND PROTOCOL: PRESS <kbd class="neu-inset">SPACE</kbd> TO TRIGGER SHUTTER | <kbd class="neu-inset">R</kbd> RESTART SESSION
+          </div>
+        </main>
+
+        <!-- -------------------------------------------------------------
+             RIGHT COLUMN: LAYOUT SPECIFICATION & DISPATCH
+             ------------------------------------------------------------- -->
+        <aside class="spec-panel neu-flat">
+          <div class="panel-header">
+            <div class="panel-title">
+              <span class="panel-title-dot" style="background: var(--neu-cyan);"></span>
+              <h2>LAYOUT SPECIFICATION</h2>
+            </div>
+            <span class="panel-badge neu-inset" style="color:var(--neu-emerald); font-weight:700;">READY</span>
+          </div>
+
+          <!-- Frame Style Matrix -->
+          <div class="spec-section">
+            <label class="spec-section-label">SELECT FRAME MATRIX</label>
+            <div class="frame-matrix-grid">
+              <button class="neu-button frame-matrix-btn active" onclick="selectPrintTemplate(1)">
+                <div class="color-swatch-circle" style="background:#FFFFFF; border:2px solid #CBD5E1;"></div>
+                <span class="frame-matrix-label">CLASSIC</span>
+              </button>
+              <button class="neu-button frame-matrix-btn" onclick="selectPrintTemplate(2)">
+                <div class="color-swatch-circle" style="background:#0F172A; border:2px solid #334155;"></div>
+                <span class="frame-matrix-label">DARK</span>
+              </button>
+              <button class="neu-button frame-matrix-btn" onclick="selectPrintTemplate(3)">
+                <div class="color-swatch-circle" style="background:#FFE4E6; border:2px solid #FDA4AF;"></div>
+                <span class="frame-matrix-label">BLUSH</span>
+              </button>
+              <button class="neu-button frame-matrix-btn" onclick="selectPrintTemplate(4)">
+                <div class="color-swatch-circle" style="background:#FEF3C7; border:2px solid #FCD34D;"></div>
+                <span class="frame-matrix-label">WARM</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Studio Look & Color Profile -->
+          <div class="spec-section">
+            <label class="spec-section-label">LOOK & COLOR PROFILE</label>
+            <div class="look-profile-grid">
+              <button class="neu-button look-profile-btn active" onclick="setFilter('none', this)">NATURAL</button>
+              <button class="neu-button look-profile-btn" onclick="setFilter('grayscale', this)">MONO B&W</button>
+              <button class="neu-button look-profile-btn" onclick="setFilter('pop', this)">CYBER GLOW</button>
+            </div>
+          </div>
+
+          <!-- Typography / Metadata Customization -->
+          <div class="metadata-inputs-box neu-inset">
+            <span style="font-family:'Space Mono', monospace; font-size:0.65rem; font-weight:700; color:var(--text-muted); text-transform:uppercase;">
+              METADATA HEADER TEXT
+            </span>
+            <div class="metadata-field">
+              <label for="inputStripTitle">HEADER TITLE</label>
+              <input type="text" id="inputStripTitle" class="neu-input-field" value="SATYA MEMORIES" oninput="updateStripTexts()">
+            </div>
+            <div class="metadata-field">
+              <label for="inputStripSub">SUB-TELEMETRY STRING</label>
+              <input type="text" id="inputStripSub" class="neu-input-field" value="STUDIO EDITION // 2026-X" oninput="updateStripTexts()">
+            </div>
+          </div>
+
+          <!-- Print Dispatch Actions -->
+          <div class="dispatch-actions-box">
+            <button class="neu-button" style="width:100%; padding:10px;" onclick="shuffleStripOrder()">
+              <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                <path d="M4 6h16M4 12h16m-7 6h7"></path>
+              </svg>
+              PERMUTE FRAME SLOTS
+            </button>
+            <button class="btn-dispatch-dark" onclick="proceedToPrint()">
+              <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" style="color:var(--neu-emerald);">
+                <path d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
+              </svg>
+              <span>DISPATCH TO PRINT &gt;&gt;&gt;</span>
+            </button>
+          </div>
+
+          <!-- Printer Hardware Status Strip -->
+          <div class="printer-status-strip">
+            <span>PRINTER: DNP-DS620</span>
+            <span class="printer-online-badge">
+              <span class="beacon-dot" style="width:6px; height:6px;"></span> ONLINE (98% PAPER)
+            </span>
+          </div>
+        </aside>
+
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         SCREEN 2: GALLERY
+         ==================================================================== -->
+    <!-- ====================================================================
+         SCREEN 2: GALLERY WITH FILTER TRAY & ENHANCED CARDS
+         ==================================================================== -->
+    <section id="screen-gallery" class="screen">
+      <div class="neu-flat" style="padding: 22px; margin-bottom: 20px;">
+        <div class="gallery-section-header">
+          <div class="gallery-header-top">
+            <div>
+              <h2 style="font-size: 1.4rem; font-weight: 800; letter-spacing: -0.02em;">Galeri Foto Sesi</h2>
+              <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 4px;">Pilih maksimal 6 foto untuk dikomposisikan ke dalam 2 strip 3x1 (3 foto per bingkai)</p>
+            </div>
+            <div style="display: flex; gap: 12px; align-items: center;">
+              <div class="neu-inset mono" style="padding: 8px 16px; font-weight: 700; font-size: 0.85rem; color: var(--neu-emerald);" id="selectionCounterText">
+                Selected: 0/6
+              </div>
+              <button class="btn-dispatch-dark" id="btnGoToLayout" onclick="proceedToLayout()" disabled style="padding: 10px 20px; font-size: 0.82rem;">
+                Buat 2x Strip 3x1 (6 Foto) &gt;&gt;
+              </button>
+            </div>
+          </div>
+
+          <!-- Gallery Filter & Action Tray -->
+          <div class="gallery-filter-tray neu-inset">
+            <div class="filter-pill-group">
+              <button class="gallery-filter-btn active" id="filterBtnAll" data-filter="all" onclick="setGalleryFilter('all', this)">
+                [SEMUA FOTO] (<span id="filterAllCount">0</span>)
+              </button>
+              <button class="gallery-filter-btn" id="filterBtnSelected" data-filter="selected" onclick="setGalleryFilter('selected', this)">
+                [TERPILIH] (<span id="filterSelectedCount">0/6</span>)
+              </button>
+            </div>
+
+            <div class="gallery-quick-actions">
+              <button class="neu-button" style="padding: 5px 12px; font-size: 0.68rem;" onclick="selectTop6Photos()">
+                Pilih 6 Teratas
+              </button>
+              <button class="neu-button" style="padding: 5px 12px; font-size: 0.68rem; color: var(--text-muted);" onclick="clearSelection()">
+                Reset Pilihan
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div id="galleryGrid" class="gallery-grid">
+          <!-- Photo cards rendered dynamically by app.js -->
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         SCREEN 3: PHOTO EDITOR
+         ==================================================================== -->
+    <section id="screen-editor" class="screen">
+      <div class="editor-layout">
+        <div class="editor-canvas-container neu-flat">
+          <canvas id="editorCanvas"></canvas>
+        </div>
+
+        <div class="editor-sidebar neu-flat">
+          <h3 style="font-size: 1.1rem; font-weight: 800; padding-bottom: 8px; border-bottom: 1px solid rgba(203, 213, 225, 0.6);">Penyesuaian Visual</h3>
+
+          <div class="range-control-group">
+            <div class="range-label-row">
+              <span>BRIGHTNESS</span>
+              <span id="valBrightness" class="mono">0</span>
+            </div>
+            <input type="range" class="range-slider" id="sliderBrightness" min="-100" max="100" value="0" oninput="applyEditorTransform()">
+          </div>
+
+          <div class="range-control-group">
+            <div class="range-label-row">
+              <span>CONTRAST</span>
+              <span id="valContrast" class="mono">0</span>
+            </div>
+            <input type="range" class="range-slider" id="sliderContrast" min="-100" max="100" value="0" oninput="applyEditorTransform()">
+          </div>
+
+          <div class="range-control-group">
+            <div class="range-label-row">
+              <span>SATURATION</span>
+              <span id="valSaturation" class="mono">0</span>
+            </div>
+            <input type="range" class="range-slider" id="sliderSaturation" min="-100" max="100" value="0" oninput="applyEditorTransform()">
+          </div>
+
+          <div class="spec-section">
+            <label class="spec-section-label">Filter Warna</label>
+            <div class="filter-chips-grid">
+              <button class="neu-button filter-chip active" onclick="setFilter('none', this)">Normal</button>
+              <button class="neu-button filter-chip" onclick="setFilter('sepia', this)">Sepia</button>
+              <button class="neu-button filter-chip" onclick="setFilter('grayscale', this)">B&W</button>
+              <button class="neu-button filter-chip" onclick="setFilter('warm', this)">Warm</button>
+              <button class="neu-button filter-chip" onclick="setFilter('cool', this)">Cool</button>
+              <button class="neu-button filter-chip" onclick="setFilter('vintage', this)">Vintage</button>
+              <button class="neu-button filter-chip" onclick="setFilter('pop', this)">Pop</button>
+            </div>
+          </div>
+
+          <div class="spec-section">
+            <label class="spec-section-label">Orientasi</label>
+            <div style="display: flex; gap: 8px;">
+              <button class="neu-button" style="flex:1;" onclick="rotateEditor(-90)">-90°</button>
+              <button class="neu-button" style="flex:1;" onclick="rotateEditor(90)">+90°</button>
+              <button class="neu-button" style="flex:1;" onclick="flipEditorHorizontal()">Flip</button>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 10px; margin-top: auto; padding-top: 10px;">
+            <button class="neu-button" style="flex: 1;" onclick="resetEditor()">Reset</button>
+            <button class="btn-dispatch-dark" style="flex: 1; padding: 8px 12px; font-size: 0.78rem;" onclick="saveEditorChanges()">Simpan</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         SCREEN 4: DUAL 3x1 STRIP LAYOUT BUILDER (2 STRIPS SIDE-BY-SIDE)
+         ==================================================================== -->
+    <section id="screen-layout" class="screen">
+      <div class="dual-strip-workspace">
+
+        <!-- DUAL STRIP PREVIEW MOUNT -->
+        <div class="dual-strip-preview-tray neu-flat">
+          <div class="panel-header" style="margin-bottom:0;">
+            <div class="panel-title">
+              <span class="panel-title-dot" style="background: var(--neu-emerald);"></span>
+              <h2>PREVIEW DUAL STRIP 3x1 (CETAK 2 BINGKAI)</h2>
+            </div>
+            <span class="panel-badge neu-inset">TOTAL 6 FOTO</span>
+          </div>
+
+          <div class="dual-strip-mount neu-inset">
+            <!-- STRIP 1 (BINGKAI A - FOTO 1, 2, 3) -->
+            <div class="single-strip-wrapper">
+              <span class="strip-column-header-tag neu-inset" style="color:var(--neu-emerald);">STRIP 1 // BINGKAI A</span>
+              <div id="photoStrip1" class="photo-strip-3x1">
+                <div class="strip-slot" onclick="swapSlot(0)" title="Klik untuk tukar posisi">
+                  <span class="strip-slot-badge strip-1-badge">01</span>
+                  <img id="stripImg0" src="" alt="Slot 1">
+                </div>
+                <div class="strip-slot" onclick="swapSlot(1)" title="Klik untuk tukar posisi">
+                  <span class="strip-slot-badge strip-1-badge">02</span>
+                  <img id="stripImg1" src="" alt="Slot 2">
+                </div>
+                <div class="strip-slot" onclick="swapSlot(2)" title="Klik untuk tukar posisi">
+                  <span class="strip-slot-badge strip-1-badge">03</span>
+                  <img id="stripImg2" src="" alt="Slot 3">
+                </div>
+
+                <div class="strip-footer-text" id="strip1TextDisplay">SATYA MEMORIES</div>
+                <div class="strip-footer-sub" id="strip1DateDisplay">STUDIO EDITION // 2026-X</div>
+              </div>
+            </div>
+
+            <!-- CUT LINE SEPARATOR -->
+            <div class="dual-strip-separator">
+              <div class="cut-line-dashed"></div>
+              <div class="cut-scissors-icon" title="Garis Potong Printer (2x6 Cut)">✂️</div>
+            </div>
+
+            <!-- STRIP 2 (BINGKAI B - FOTO 4, 5, 6) -->
+            <div class="single-strip-wrapper">
+              <span class="strip-column-header-tag neu-inset" style="color:var(--neu-cyan);">STRIP 2 // BINGKAI B</span>
+              <div id="photoStrip2" class="photo-strip-3x1">
+                <div class="strip-slot" onclick="swapSlot(3)" title="Klik untuk tukar posisi">
+                  <span class="strip-slot-badge strip-2-badge">04</span>
+                  <img id="stripImg3" src="" alt="Slot 4">
+                </div>
+                <div class="strip-slot" onclick="swapSlot(4)" title="Klik untuk tukar posisi">
+                  <span class="strip-slot-badge strip-2-badge">05</span>
+                  <img id="stripImg4" src="" alt="Slot 5">
+                </div>
+                <div class="strip-slot" onclick="swapSlot(5)" title="Klik untuk tukar posisi">
+                  <span class="strip-slot-badge strip-2-badge">06</span>
+                  <img id="stripImg5" src="" alt="Slot 6">
+                </div>
+
+                <div class="strip-footer-text" id="strip2TextDisplay">SATYA MEMORIES</div>
+                <div class="strip-footer-sub" id="strip2DateDisplay">STUDIO EDITION // 2026-X</div>
+              </div>
+            </div>
+          </div>
+
+          <div style="display:flex; justify-content:space-between; align-items:center; font-family:'Space Mono',monospace; font-size:0.65rem; color:var(--text-muted); padding:0 4px;">
+            <span>TIP: Klik foto pada slot strip untuk menukar posisi frame.</span>
+            <span>FORMAT CETAK: 4x6" (DUAL 2x6 CUT)</span>
+          </div>
+        </div>
+
+        <!-- CONTROLS PANEL -->
+        <div class="neu-flat" style="padding: 24px; display: flex; flex-direction: column; gap: 16px;">
+          <h3 style="font-size: 1.15rem; font-weight: 800; padding-bottom: 8px; border-bottom: 1px solid rgba(203, 213, 225, 0.6);">Pengaturan Bingkai & Teks</h3>
+
+          <!-- Mode Bingkai: Samakan atau Sendiri-Sendiri -->
+          <div class="spec-section">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <label class="spec-section-label">PILIH TEMPLATE BINGKAI</label>
+              <div class="neu-inset" style="padding: 3px 6px; border-radius: var(--radius-sm); display: flex; gap: 4px;">
+                <button class="neu-button active" id="btnLinkTemplates" style="padding: 3px 8px; font-size: 0.62rem;" onclick="toggleLinkTemplates(true)">Samakan Bingkai</button>
+                <button class="neu-button" id="btnUnlinkTemplates" style="padding: 3px 8px; font-size: 0.62rem;" onclick="toggleLinkTemplates(false)">Pisah Bingkai</button>
+              </div>
+            </div>
+
+            <!-- Template Selector for Strip 1 -->
+            <div id="strip1TemplateSection">
+              <span style="font-family:'Space Mono', monospace; font-size:0.62rem; font-weight:700; color:var(--neu-emerald); display:block; margin: 4px 0;">BINGKAI STRIP 1 (FOTO 1-3):</span>
+              <div class="template-cards-grid">
+                <div class="neu-button template-card-btn active" id="tplBtn1_1" onclick="selectStripTemplate(1, 1)">
+                  <span class="template-badge-num">01</span>
+                  <span class="template-name-label">Studio White</span>
+                </div>
+                <div class="neu-button template-card-btn" id="tplBtn1_2" onclick="selectStripTemplate(1, 2)">
+                  <span class="template-badge-num">02</span>
+                  <span class="template-name-label">Obsidian</span>
+                </div>
+                <div class="neu-button template-card-btn" id="tplBtn1_3" onclick="selectStripTemplate(1, 3)">
+                  <span class="template-badge-num">03</span>
+                  <span class="template-name-label">Romance</span>
+                </div>
+                <div class="neu-button template-card-btn" id="tplBtn1_4" onclick="selectStripTemplate(1, 4)">
+                  <span class="template-badge-num">04</span>
+                  <span class="template-name-label">Retro Warm</span>
+                </div>
+                <div class="neu-button template-card-btn" id="tplBtn1_5" onclick="selectStripTemplate(1, 5)">
+                  <span class="template-badge-num">05</span>
+                  <span class="template-name-label">Neon Lounge</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Template Selector for Strip 2 (visible when unlinked) -->
+            <div id="strip2TemplateSection" style="display:none; margin-top: 8px;">
+              <span style="font-family:'Space Mono', monospace; font-size:0.62rem; font-weight:700; color:var(--neu-cyan); display:block; margin: 4px 0;">BINGKAI STRIP 2 (FOTO 4-6):</span>
+              <div class="template-cards-grid">
+                <div class="neu-button template-card-btn active" id="tplBtn2_1" onclick="selectStripTemplate(2, 1)">
+                  <span class="template-badge-num">01</span>
+                  <span class="template-name-label">Studio White</span>
+                </div>
+                <div class="neu-button template-card-btn" id="tplBtn2_2" onclick="selectStripTemplate(2, 2)">
+                  <span class="template-badge-num">02</span>
+                  <span class="template-name-label">Obsidian</span>
+                </div>
+                <div class="neu-button template-card-btn" id="tplBtn2_3" onclick="selectStripTemplate(2, 3)">
+                  <span class="template-badge-num">03</span>
+                  <span class="template-name-label">Romance</span>
+                </div>
+                <div class="neu-button template-card-btn" id="tplBtn2_4" onclick="selectStripTemplate(2, 4)">
+                  <span class="template-badge-num">04</span>
+                  <span class="template-name-label">Retro Warm</span>
+                </div>
+                <div class="neu-button template-card-btn" id="tplBtn2_5" onclick="selectStripTemplate(2, 5)">
+                  <span class="template-badge-num">05</span>
+                  <span class="template-name-label">Neon Lounge</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Metadata Footer Texts -->
+          <div class="metadata-inputs-box neu-inset">
+            <span style="font-family:'Space Mono', monospace; font-size:0.65rem; font-weight:700; color:var(--text-muted); text-transform:uppercase;">
+              TEKS FOOTER BINGKAI
+            </span>
+            <div class="metadata-field">
+              <label for="inputStripTitle">JUDUL FOOTER (STRIP 1 & 2)</label>
+              <input type="text" id="inputStripTitle" class="neu-input-field" value="SATYA MEMORIES" oninput="updateDualStripTexts()">
+            </div>
+            <div class="metadata-field">
+              <label for="inputStripSub">SUBTEKS / TANGGAL</label>
+              <input type="text" id="inputStripSub" class="neu-input-field" value="STUDIO EDITION // 2026-X" oninput="updateDualStripTexts()">
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <button class="neu-button" style="flex:1;" onclick="shuffleStripOrder()">
+              Acak Semua Foto
+            </button>
+            <button class="neu-button" style="flex:1;" onclick="swapStrips()">
+              Tukar Strip 1 & 2
+            </button>
+            <button class="btn-dispatch-dark" style="flex:2; min-width:200px;" onclick="proceedToPrint()">
+              Lihat Preview Cetak &gt;&gt;
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         SCREEN 5: PRINT STAGE WITH LIVE ACCURATE DUAL-STRIP PREVIEW
+         ==================================================================== -->
+    <section id="screen-print" class="screen">
+      <div class="print-stage-workspace">
+
+        <!-- LIVE DUAL-STRIP PRINT PREVIEW STAGE -->
+        <div class="print-live-preview-box neu-flat">
+          <div class="print-preview-telemetry-header">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span class="beacon-dot"></span>
+              <strong style="color:var(--text-main);">LIVE ACCURATE PRINT PREVIEW</strong>
+            </div>
+            <div class="neu-inset mono" style="padding: 4px 10px; font-size: 0.65rem;">
+              KERTAS: 4x6" (1200 x 1800 px @ 300 DPI)
+            </div>
+          </div>
+
+          <!-- Realistic 4x6 Photographic Paper Mockup -->
+          <div class="print-sheet-viewport">
+            <div class="print-bar" id="printBar" style="display:none;"></div>
+            <canvas id="printPreviewCanvas" width="1200" height="1800"></canvas>
+          </div>
+
+          <div style="display: flex; align-items: center; justify-content: space-between; width: 100%; font-family: 'Space Mono', monospace; font-size: 0.65rem; color: var(--text-muted); padding: 0 4px;">
+            <span>HASIL KELUAR: 2 STRIP 3x1 (UKURAN 2x6" PER STRIP)</span>
+            <span style="color: var(--neu-emerald); font-weight:700;">DNP CUT FEATURE: ENABLED (50-50 SPLIT)</span>
+          </div>
+        </div>
+
+        <!-- PRINT SETTINGS & DISPATCH PANEL -->
+        <div class="neu-flat" style="padding: 24px; display: flex; flex-direction: column; gap: 16px;">
+          <h3 style="font-size: 1.15rem; font-weight: 800; padding-bottom: 8px; border-bottom: 1px solid rgba(203, 213, 225, 0.6);">Pengaturan Output Cetak</h3>
+
+          <div class="metadata-field">
+            <label for="selectPaperSize">FORMAT KERTAS CETAK</label>
+            <select id="selectPaperSize" class="neu-input-field">
+              <option value="4x6">4x6 inches (Postcard Sheet = Dual 2x6 Strips)</option>
+              <option value="2x6">2x6 inches (Single Strip Direct Cut)</option>
+              <option value="5x7">5x7 inches (Studio Frame Display)</option>
+            </select>
+          </div>
+
+          <div class="metadata-field">
+            <label for="inputCopies">JUMLAH LEMBAR CETAK (1 Lembar = 2 Strip)</label>
+            <input type="number" id="inputCopies" class="neu-input-field mono" value="1" min="1" max="10" oninput="updatePrintCopiesInfo()">
+          </div>
+
+          <div class="neu-inset" style="padding: 12px; border-radius: var(--radius-sm);">
+            <div style="font-family: 'Space Mono', monospace; font-size: 0.68rem; color: var(--text-secondary); line-height: 1.5;">
+              <div>• Total Strip yang akan tercetak: <strong id="totalStripsDisplay" style="color: var(--text-main);">2 Strip Foto (3x1)</strong></div>
+              <div>• Resolusi Ekspor: <strong>300 DPI Lab Quality</strong></div>
+              <div>• Driver Printer: <strong>DNP DS620 Dye-Sublimation</strong></div>
+            </div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 10px; margin-top: auto;">
+            <button class="btn-dispatch-dark" style="width: 100%; padding: 14px 20px; font-size: 0.9rem;" onclick="dispatchPrintJob()">
+              <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" style="color:var(--neu-emerald);">
+                <path d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
+              </svg>
+              <span>KIRIM KE PRINTER SEKARANG</span>
+            </button>
+
+            <button class="neu-button" style="width: 100%; padding: 10px;" onclick="downloadStripImage()">
+              <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+              Download Lembar 4x6 (Dual 3x1) JPG
+            </button>
+
+            <div style="display: flex; gap: 8px;">
+              <button class="neu-button" style="flex:1; font-size: 0.68rem;" onclick="downloadSingleStrip(1)">Download Strip 1</button>
+              <button class="neu-button" style="flex:1; font-size: 0.68rem;" onclick="downloadSingleStrip(2)">Download Strip 2</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- CCU STATUS FOOTER -->
+  <footer class="ccu-footer">
+    <div style="display: flex; align-items: center; gap: 14px;">
+      <span>LATENCY: <strong>12ms</strong></span>
+      <span>SYNC BUFFER: <strong>LOSSLESS</strong></span>
+      <span>COLOR PROFILE: <strong>sRGB D65</strong></span>
+    </div>
+    <div>
+      <span>CCU STATION #01 // STUDIO MINIMAL ARCHITECTURE</span>
+    </div>
+  </footer>
+
+  <!-- ====================================================================
+       MODALS (AUTH & NEW SESSION)
+       ==================================================================== -->
+
+  <!-- NEW SESSION MODAL -->
+  <div id="newSessionModal" class="auth-overlay hidden">
+    <div class="auth-card" id="newSessionCardElement">
+      <div class="auth-header-icon neu-inset">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>
+      </div>
+      <h2 class="auth-title">MULAI SESI FOTO BARU</h2>
+      <p class="auth-subtitle">Masukkan nama pelanggan atau event. ID unik akan dibuat otomatis berdasarkan nama dan tanggal.</p>
+
+      <form id="newSessionForm" onsubmit="handleNewSessionSubmit(event)">
+        <div class="auth-form-group">
+          <label for="inputCustomerName">Nama Pelanggan / Acara</label>
+          <div class="auth-input-wrapper">
+            <input type="text" id="inputCustomerName" class="auth-input" placeholder="Contoh: Satya, Maya Wedding" autocomplete="off" required oninput="previewSessionIdFormat()">
+          </div>
+        </div>
+
+        <div class="neu-inset-sm" style="margin-bottom: 16px; padding: 10px 14px; text-align: left;">
+          <div style="font-size: 0.65rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Format ID Sesi Unik:</div>
+          <div id="sessionPreviewId" class="mono" style="font-size: 0.85rem; font-weight: 800; color: var(--text-main); margin-top: 2px;">Satya_20260906_143000</div>
+        </div>
+
+        <div style="display: flex; gap: 10px;">
+          <button type="button" class="neu-button" style="flex:1;" onclick="closeNewSessionModal()">
+            Batal
+          </button>
+          <button type="submit" class="btn-dispatch-dark" style="flex:2;">
+            MULAI FOTO
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- AUTH LOGIN OVERLAY -->
+  <div id="authModal" class="auth-overlay">
+    <div class="auth-card" id="authCardElement">
+      <div class="auth-header-icon neu-inset">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+      </div>
+      <h2 class="auth-title">PHOTOBOOTH STUDIO</h2>
+      <p class="auth-subtitle">Aplikasi terproteksi. Masukkan kredensial operator terdaftar.</p>
+
+      <div id="authErrorBox" class="auth-error-box">
+        <span id="authErrorMessage">Kredensial tidak valid. Silakan coba lagi.</span>
+      </div>
+
+      <form id="loginForm" onsubmit="handleLoginSubmit(event)">
+        <div class="auth-form-group">
+          <label for="inputUsername">Username Operator</label>
+          <div class="auth-input-wrapper">
+            <input type="text" id="inputUsername" class="auth-input" placeholder="Masukkan username" autocomplete="username" required autofocus>
+          </div>
+        </div>
+
+        <div class="auth-form-group">
+          <label for="inputPassword">Password</label>
+          <div class="auth-input-wrapper">
+            <input type="password" id="inputPassword" class="auth-input" placeholder="Masukkan password" autocomplete="current-password" required>
+            <button type="button" class="auth-toggle-pwd" onclick="togglePasswordVisibility()">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+            </button>
+          </div>
+        </div>
+
+        <button type="submit" id="btnLoginSubmit" class="btn-dispatch-dark" style="width:100%; margin-top:8px;">
+          MASUK KE STUDIO
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION CONTAINER -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
