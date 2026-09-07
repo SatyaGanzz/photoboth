@@ -160,13 +160,26 @@ async function runTests() {
     if (res.status !== 200 || res.data.data.status !== 'printing') throw new Error('Print job send failed');
   });
 
-  // 11. Static frontend assets & 4R + Photobooth Filters verification
-  await assert('Frontend UI Serving /index.html with Notice Alert, 4R & Photobooth Filters', async () => {
+  // 10b. Google Drive Auto Upload /api/drive/upload (Authenticated)
+  await assert('Google Drive Auto Upload /api/drive/upload (Authenticated)', async () => {
+    const res = await request(
+      { hostname: 'localhost', path: '/api/drive/upload', method: 'POST' },
+      { sessionId: 'test_session', layoutFormat: '4R', compositeBase64: 'data:image/jpeg;base64,/9j/4AAQSkZJRg==' },
+      authToken
+    );
+    if (res.status !== 200 || res.data.status !== 'success' || !res.data.data.driveUrl) {
+      throw new Error('Google Drive upload failed');
+    }
+  });
+
+  // 11. Static frontend assets, 4R, Photobooth Filters & Audio Beep
+  await assert('Frontend UI Serving /index.html with Notice Alert, 4R, Filters & Audio Beep', async () => {
     const res = await request({ hostname: 'localhost', path: '/', method: 'GET' });
     if (res.status !== 200 || typeof res.data !== 'string') throw new Error('Failed to load index.html');
     if (!res.data.includes('printNoticeModal')) throw new Error('Missing printNoticeModal in index.html');
     if (!res.data.includes('btnLayout4R')) throw new Error('Missing 4R layout selector in index.html');
     if (!res.data.includes('pb-filter-grid')) throw new Error('Missing photobooth filter grid in index.html');
+    if (!res.data.includes('btnAudioToggle')) throw new Error('Missing audio toggle button in index.html');
   });
 
   // 12. Template Asset Serving

@@ -24,6 +24,7 @@ const state = {
   selectedTemplateId: 1,
   customTemplateDataUrl: null,
   timerDelay: 3,
+  soundEnabled: true,
   cameraFx: {
     filter: 'none',
     vignette: false,
@@ -589,6 +590,136 @@ function renderSimulatedCameraFeed() {
   loop();
 }
 
+// --- WEB AUDIO API SYNTHESIZER (COUNTDOWN BEEPS & SHUTTER SOUND) ---
+let audioCtx = null;
+
+function getAudioContext() {
+  if (!audioCtx) {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (AudioContextClass) {
+      audioCtx = new AudioContextClass();
+    }
+  }
+  if (audioCtx && audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
+  return audioCtx;
+}
+
+// Play rhythmic countdown beep (higher energetic chime on final second)
+function playCountdownBeep(count) {
+  if (!state.soundEnabled) return;
+  try {
+    const ctx = getAudioContext();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    // count === 1: 1320Hz (E6) alert tone, count > 1: 880Hz (A5) studio rhythm tone
+    const isFinalSecond = count === 1;
+    osc.type = isFinalSecond ? 'triangle' : 'sine';
+    osc.frequency.setValueAtTime(isFinalSecond ? 1320 : 880, now);
+
+    const duration = isFinalSecond ? 0.22 : 0.12;
+    gain.gain.setValueAtTime(0.001, now);
+    gain.gain.exponentialRampToValueAtTime(0.35, now + 0.015);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc.start(now);
+    osc.stop(now + duration + 0.02);
+  } catch (e) {
+    console.warn('Audio countdown beep failed:', e);
+  }
+}
+
+// Play authentic photobooth DSLR mechanical shutter sound
+function playShutterSound() {
+  if (!state.soundEnabled) return;
+  try {
+    const ctx = getAudioContext();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+
+    // 1. Mechanical Curtain Open (fast frequency drop)
+    const osc1 = ctx.createOscillator();
+    const gain1 = ctx.createGain();
+    osc1.type = 'triangle';
+    osc1.frequency.setValueAtTime(650, now);
+    osc1.frequency.exponentialRampToValueAtTime(140, now + 0.04);
+    gain1.gain.setValueAtTime(0.45, now);
+    gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.045);
+    osc1.connect(gain1);
+    gain1.connect(ctx.destination);
+    osc1.start(now);
+    osc1.stop(now + 0.05);
+
+    // 2. White Noise Burst (shutter friction & curtain snap texture)
+    const bufferSize = Math.floor(ctx.sampleRate * 0.045);
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = Math.random() * 2 - 1;
+    }
+    const noiseSource = ctx.createBufferSource();
+    noiseSource.buffer = buffer;
+
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(2400, now);
+    filter.Q.setValueAtTime(1.5, now);
+
+    const noiseGain = ctx.createGain();
+    noiseGain.gain.setValueAtTime(0.38, now);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.045);
+
+    noiseSource.connect(filter);
+    filter.connect(noiseGain);
+    noiseGain.connect(ctx.destination);
+    noiseSource.start(now);
+    noiseSource.stop(now + 0.05);
+
+    // 3. Mirror Return / Curtain Close Clack (38ms later)
+    const osc2 = ctx.createOscillator();
+    const gain2 = ctx.createGain();
+    osc2.type = 'sine';
+    osc2.frequency.setValueAtTime(420, now + 0.038);
+    osc2.frequency.exponentialRampToValueAtTime(90, now + 0.08);
+    gain2.gain.setValueAtTime(0.001, now);
+    gain2.gain.setValueAtTime(0.35, now + 0.038);
+    gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.085);
+    osc2.connect(gain2);
+    gain2.connect(ctx.destination);
+    osc2.start(now + 0.038);
+    osc2.stop(now + 0.09);
+  } catch (e) {
+    console.warn('Audio shutter sound failed:', e);
+  }
+}
+
+function toggleAudioBeep() {
+  state.soundEnabled = !state.soundEnabled;
+  getAudioContext(); // unlock AudioContext on user gesture
+  const icon = document.getElementById('audioToggleIcon');
+  const text = document.getElementById('audioToggleText');
+  const btn = document.getElementById('btnAudioToggle');
+
+  if (icon) icon.textContent = state.soundEnabled ? '🔊' : '🔇';
+  if (text) text.textContent = state.soundEnabled ? 'BEEP: ON' : 'BEEP: OFF';
+  if (btn) btn.classList.toggle('active', state.soundEnabled);
+
+  if (state.soundEnabled) {
+    playCountdownBeep(1);
+    showToast('Suara Countdown Beep & Shutter Aktif!', 'success');
+  } else {
+    showToast('Suara Beep dinonaktifkan (Mute)');
+  }
+}
+
 // --- CAPTURE WORKFLOW ---
 let isCapturing = false;
 
@@ -601,6 +732,7 @@ async function triggerCountdownCapture(overrideDelay) {
   }
 
   isCapturing = true;
+  getAudioContext(); // Ensure AudioContext is active on capture action
   const delay = overrideDelay !== undefined ? overrideDelay : (state.timerDelay !== undefined ? state.timerDelay : 3);
 
   if (delay > 0) {
@@ -609,6 +741,7 @@ async function triggerCountdownCapture(overrideDelay) {
 
     for (let count = delay; count > 0; count--) {
       overlay.textContent = count;
+      playCountdownBeep(count);
       if (window.gsap) {
         gsap.fromTo(overlay, { scale: 1.4, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.4, ease: 'back.out(1.5)' });
       }
@@ -646,6 +779,7 @@ async function captureCurrentFrame() {
     flash.style.opacity = '0.85';
     setTimeout(() => { flash.style.opacity = '0'; }, 150);
   }
+  playShutterSound();
 
   const video = document.getElementById('cameraVideo');
   let base64Image = null;
@@ -2106,6 +2240,27 @@ async function dispatchPrintJob() {
       })
     });
     const result = await res.json();
+
+    // Auto-Upload foto hasil cetak ke Google Drive langsung setelah cetak diproses
+    try {
+      showToast('☁️ Mengunggah foto hasil cetak ke Google Drive...', 'info');
+      const driveRes = await authFetch('/api/drive/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId: state.currentSessionId,
+          layoutFormat: state.strip.layoutFormat,
+          compositeBase64: stripBase64
+        })
+      });
+      const driveData = await driveRes.json();
+      if (driveData.status === 'success') {
+        showToast('✅ Foto berhasil otomatis tersimpan di Google Drive!', 'success');
+      }
+    } catch (driveErr) {
+      console.error('Auto Drive upload failed:', driveErr);
+    }
+
     setTimeout(() => {
       if (bar) bar.style.display = 'none';
       showToast(`Cetak berhasil! Silakan ambil hasil cetak Anda di tray.`, 'success');

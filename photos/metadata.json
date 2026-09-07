@@ -159,6 +159,38 @@
       },
       "status": "captured",
       "selected": false
+    },
+    "photo_1788763255834_a4a96d": {
+      "id": "photo_1788763255834_a4a96d",
+      "sessionId": "test_session",
+      "filename": "photo_1788763255834_a4a96d.svg",
+      "filepath": "C:\\Users\\Satya\\Documents\\PROJECT\\PHOTOBOTH\\photos\\test_session\\photo_1788763255834_a4a96d.svg",
+      "url": "/photos/test_session/photo_1788763255834_a4a96d.svg",
+      "thumbnail": "/photos/test_session/photo_1788763255834_a4a96d.svg",
+      "timestamp": "2026-09-07T06:40:55.851Z",
+      "metadata": {
+        "width": 1200,
+        "height": 900,
+        "camera": "Integrated Camera / Studio HD"
+      },
+      "status": "captured",
+      "selected": false
+    },
+    "photo_1788784000693_99a2c5": {
+      "id": "photo_1788784000693_99a2c5",
+      "sessionId": "test_session",
+      "filename": "photo_1788784000693_99a2c5.svg",
+      "filepath": "C:\\Users\\Satya\\Documents\\PROJECT\\PHOTOBOTH\\photos\\test_session\\photo_1788784000693_99a2c5.svg",
+      "url": "/photos/test_session/photo_1788784000693_99a2c5.svg",
+      "thumbnail": "/photos/test_session/photo_1788784000693_99a2c5.svg",
+      "timestamp": "2026-09-07T12:26:40.716Z",
+      "metadata": {
+        "width": 1200,
+        "height": 900,
+        "camera": "Integrated Camera / Studio HD"
+      },
+      "status": "captured",
+      "selected": false
     }
   },
   "layouts": {
@@ -213,6 +245,32 @@
       "url": "/photos/default_session/layout_1788702062368_ff9774.jpg",
       "preview": "/photos/default_session/layout_1788702062368_ff9774.jpg",
       "generatedAt": "2026-09-06T13:41:02.368Z"
+    },
+    "layout_1788763255854_7e0a8e": {
+      "layoutId": "layout_1788763255854_7e0a8e",
+      "sessionId": "default_session",
+      "photoIds": [
+        "photo_1788763255834_a4a96d"
+      ],
+      "template": "3x1",
+      "padding": 16,
+      "backgroundColor": "#FFFFFF",
+      "url": "/photos/default_session/layout_1788763255854_7e0a8e.jpg",
+      "preview": "/photos/default_session/layout_1788763255854_7e0a8e.jpg",
+      "generatedAt": "2026-09-07T06:40:55.854Z"
+    },
+    "layout_1788784000719_fe49f2": {
+      "layoutId": "layout_1788784000719_fe49f2",
+      "sessionId": "default_session",
+      "photoIds": [
+        "photo_1788784000693_99a2c5"
+      ],
+      "template": "3x1",
+      "padding": 16,
+      "backgroundColor": "#FFFFFF",
+      "url": "/photos/default_session/layout_1788784000719_fe49f2.jpg",
+      "preview": "/photos/default_session/layout_1788784000719_fe49f2.jpg",
+      "generatedAt": "2026-09-07T12:26:40.719Z"
     }
   },
   "sessions": {
@@ -239,7 +297,9 @@
       "photos": [
         "photo_1788700978004_e2cd9c",
         "photo_1788701313074_837004",
-        "photo_1788702062346_6f4ecd"
+        "photo_1788702062346_6f4ecd",
+        "photo_1788763255834_a4a96d",
+        "photo_1788784000693_99a2c5"
       ]
     },
     "Satya_20260906_202833": {
@@ -270,6 +330,18 @@
       "id": "STYA_20260907_123905",
       "customerName": "STYA",
       "createdAt": "2026-09-07T05:39:05.414Z",
+      "photos": []
+    },
+    "Satya_20260907_134055": {
+      "id": "Satya_20260907_134055",
+      "customerName": "Satya",
+      "createdAt": "2026-09-07T06:40:55.831Z",
+      "photos": []
+    },
+    "Satya_20260907_192640": {
+      "id": "Satya_20260907_192640",
+      "customerName": "Satya",
+      "createdAt": "2026-09-07T12:26:40.689Z",
       "photos": []
     }
   }

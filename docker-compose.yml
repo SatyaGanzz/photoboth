@@ -1,0 +1,12 @@
+services:
+  photobooth:
+    image: andi34/photobooth:latest
+    container_name: photobooth
+    restart: unless-stopped
+    ports:
+      - "8000:80"
+    volumes:
+      - ./data:/var/www/html/data
+      - ./config:/var/www/html/config
+    environment:
+      - TZ=Asia/Jakarta

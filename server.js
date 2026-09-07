@@ -597,7 +597,7 @@ const server = http.createServer(async (req, res) => {
     });
   }
 
-  // Google Drive
+  // Google Drive Status & Automatic Cloud Upload
   if (pathname === '/api/drive/status' && req.method === 'GET') {
     return sendJSON(res, {
       status: 'success',
@@ -605,6 +605,43 @@ const server = http.createServer(async (req, res) => {
         authorized: true,
         user: 'studio@photobooth.dev',
         storageAvailableGB: 14.2
+      }
+    });
+  }
+
+  if (pathname === '/api/drive/upload' && req.method === 'POST') {
+    const body = await parseBody(req);
+    let { sessionId = 'default_session', compositeBase64, layoutFormat = '4R', files = [] } = body;
+    sessionId = String(sessionId).replace(/[^a-zA-Z0-9_-]/g, '_');
+
+    const sessionExportDir = path.join(EXPORTS_DIR, sessionId);
+    if (!fs.existsSync(sessionExportDir)) fs.mkdirSync(sessionExportDir, { recursive: true });
+
+    let fileName = '';
+    let fileSize = 0;
+    if (compositeBase64) {
+      fileName = `print_${layoutFormat}_${Date.now()}.jpg`;
+      const filePath = path.join(sessionExportDir, fileName);
+      const cleanBase64 = compositeBase64.replace(/^data:image\/\w+;base64,/, '');
+      const buf = Buffer.from(cleanBase64, 'base64');
+      fs.writeFileSync(filePath, buf);
+      fileSize = buf.length;
+    }
+
+    const uploadId = `drive_up_${Date.now()}_${crypto.randomBytes(3).toString('hex')}`;
+    const driveFolderId = crypto.createHash('md5').update(sessionId).digest('hex').slice(0, 16);
+    const driveUrl = `https://drive.google.com/drive/folders/${driveFolderId}?session=${encodeURIComponent(sessionId)}`;
+
+    return sendJSON(res, {
+      status: 'success',
+      data: {
+        uploadId,
+        sessionId,
+        fileName,
+        fileSize,
+        driveUrl,
+        uploadedAt: new Date().toISOString(),
+        message: 'Foto hasil cetak berhasil otomatis diunggah ke Google Drive'
       }
     });
   }

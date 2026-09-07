@@ -255,13 +255,21 @@
               </select>
             </div>
 
-            <!-- Timer Delay Presets -->
+            <!-- Timer Delay Presets & Audio Toggle -->
             <div class="timer-preset-tray neu-inset">
               <span class="timer-preset-label">TIMER:</span>
               <button class="neu-button timer-btn" data-delay="0" onclick="setTimerDelay(0, this)">OFF</button>
               <button class="neu-button timer-btn active" data-delay="3" onclick="setTimerDelay(3, this)">3s</button>
               <button class="neu-button timer-btn" data-delay="5" onclick="setTimerDelay(5, this)">5s</button>
               <button class="neu-button timer-btn" data-delay="10" onclick="setTimerDelay(10, this)">10s</button>
+
+              <div style="width: 1px; height: 16px; background: rgba(203, 213, 225, 0.8); margin: 0 4px;"></div>
+
+              <!-- Audio Beep & Shutter Sound Switch -->
+              <button class="neu-button active" id="btnAudioToggle" onclick="toggleAudioBeep()" title="Toggle Suara Countdown Beep & Shutter" style="padding: 4px 8px; font-size: 0.65rem;">
+                <span id="audioToggleIcon">🔊</span>
+                <span id="audioToggleText">BEEP</span>
+              </button>
             </div>
           </div>
 
@@ -954,6 +962,10 @@
         <div style="font-size: 0.78rem; color: var(--text-main); display: flex; justify-content: space-between;">
           <span style="color:var(--text-secondary);">Kualitas Cetak:</span>
           <strong style="color:var(--neu-emerald);">300 DPI Lab Quality</strong>
+        </div>
+        <div style="font-size: 0.78rem; color: var(--text-main); display: flex; justify-content: space-between;">
+          <span style="color:var(--text-secondary);">Upload ke Drive:</span>
+          <strong style="color:var(--neu-cyan);">☁️ Otomatis Setelah Cetak</strong>
         </div>
       </div>
 
