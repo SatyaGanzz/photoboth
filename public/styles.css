@@ -47,6 +47,11 @@
   /* Borders */
   --border-flat: 1px solid rgba(255, 255, 255, 0.65);
   --border-inset: 1px solid rgba(255, 255, 255, 0.35);
+
+  /* Emil Kowalski Design Engineering Easings */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 /* Base Reset & Typography */
@@ -109,22 +114,27 @@ body {
   justify-content: center;
   gap: 6px;
   padding: 8px 14px;
-  transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 140ms var(--ease-out), box-shadow 140ms var(--ease-out), color 120ms ease;
   text-decoration: none;
+  outline: none;
 }
 
-.neu-button:hover {
-  box-shadow: var(--shadow-button-hover);
-  transform: translateY(-1px);
-  color: var(--text-main);
+@media (hover: hover) and (pointer: fine) {
+  .neu-button:hover {
+    box-shadow: var(--shadow-button-hover);
+    transform: translateY(-1px);
+    color: var(--text-main);
+  }
 }
 
-.neu-button:active,
+.neu-button:active {
+  transform: scale(0.97) translateY(1px) !important;
+}
+
 .neu-button.active,
 .neu-button-active {
   box-shadow: var(--shadow-pressed) !important;
   border-color: rgba(255, 255, 255, 0.2) !important;
-  transform: translateY(1px);
   color: var(--text-main) !important;
 }
 
@@ -1980,15 +1990,15 @@ body {
 .auth-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.4);
-  backdrop-filter: blur(8px);
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(12px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
   padding: 20px;
   opacity: 1;
-  transition: opacity 0.2s ease;
+  transition: opacity 180ms var(--ease-out);
 }
 
 .auth-overlay.hidden {
@@ -2009,6 +2019,9 @@ body {
   flex-direction: column;
   gap: 16px;
   text-align: center;
+  transform: scale(1);
+  transform-origin: center;
+  transition: transform 180ms var(--ease-out);
 }
 
 .auth-header-icon {
@@ -2162,4 +2175,31 @@ body {
 ::-webkit-scrollbar-thumb {
   background: #BCC5D2;
   border-radius: 9999px;
+}
+
+/* ==========================================================================
+   KIOSK MODE & POLISH (EMIL KOWALSKI DESIGN ENGINEERING)
+   ========================================================================== */
+body.kiosk-mode {
+  padding: 6px 10px;
+  user-select: none;
+}
+
+body.kiosk-mode .ccu-footer {
+  display: none !important;
+}
+
+body.kiosk-mode #authUserBadge {
+  display: none !important;
+}
+
+/* Accessible Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

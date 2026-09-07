@@ -34,31 +34,32 @@ Panduan lengkap setup dan konfigurasi DSLR camera untuk Photobooth.
 
 ### Prerequisites
 
-#### Windows
+#### Windows (Paling Direkomendasikan)
 
-```bash
-# Install Visual C++ Redistributable
-# Download from: https://support.microsoft.com/en-us/help/2977003
+Di Windows, Anda tidak perlu mengompilasi gphoto2 dari Linux. Terdapat 3 metode standar industri:
 
-# Install USB drivers untuk camera
-# Canon: https://www.canon.com/en/support/
-# Nikon: https://www.nikon.com/en/support/
-```
+1. **Metode 1 (Paling Mudah): Canon EOS Webcam Utility / Cam Link HDMI**
+   - Install **Canon EOS Webcam Utility** (resmi Canon) atau gunakan kabel HDMI + USB Cam Link / Video Capture Card murah.
+   - Hubungkan kamera DSLR ke USB laptop. Kamera akan langsung terdeteksi di Windows sebagai webcam berkualitas tinggi (1080p/4K).
+   - Buka browser aplikasi Photobooth, pilih kamera DSLR dari menu dropdown `[CAM 01]`. Tidak butuh software tambahan!
 
-#### macOS
+2. **Metode 2: digiCamControl (Aplikasi Tethering Windows Open Source)**
+   - Download gratis di: [digiCamControl.com](https://digicamcontrol.com/)
+   - Mendukung Canon, Nikon, Sony lengkap dengan live view, focus, ISO, dan shutter speed.
+   - Aplikasi Photobooth dapat memicu shutter via CLI:
+     ```cmd
+     "C:\Program Files (x86)\digiCamControl\CameraControlRemoteCmd.exe" /capture /filename "photos\test.jpg"
+     ```
+   - Atau via REST API bawaan digiCamControl di `http://localhost:5513/?sl=capture`.
 
-```bash
-# Install Homebrew
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+3. **Metode 3: Hot Folder (Canon EOS Utility)**
+   - Buka Canon EOS Utility di Windows.
+   - Atur folder penyimpanan otomatis ke `photos/<SessionID>/`.
+   - Server Photobooth akan otomatis memuat file baru setiap kamera menjepret.
 
-# Install gphoto2
-brew install gphoto2 libgphoto2
+#### macOS / Linux
 
-# Install libusb (for USB communication)
-brew install libusb
-```
-
-#### Linux (Ubuntu/Debian)
+Gunakan `gphoto2`:
 
 ```bash
 # Install dependencies

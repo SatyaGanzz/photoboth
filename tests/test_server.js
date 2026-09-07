@@ -72,16 +72,36 @@ async function runTests() {
     if (res.status !== 401) throw new Error('Expected 401 for wrong password');
   });
 
-  // 4. Successful Login
-  await assert('Login with valid operator credentials -> 200 OK + Token', async () => {
+  // 4. Successful Login (Credentials from Environment with fallback)
+  await assert('Login with valid operator credentials (Env aware) -> 200 OK + Token', async () => {
+    const validUser = process.env.ADMIN_USERNAME || 'Sxatya';
+    const validPass = process.env.ADMIN_PASSWORD || 'R13245';
     const res = await request(
       { hostname: 'localhost', path: '/api/auth/login', method: 'POST' },
-      { username: 'Sxatya', password: 'R13245' }
+      { username: validUser, password: validPass }
     );
-    if (res.status !== 200 || !res.data.data.token || res.data.data.user !== 'Sxatya') {
+    if (res.status !== 200 || !res.data.data.token || res.data.data.user !== validUser) {
       throw new Error(`Login failed: ${JSON.stringify(res.data)}`);
     }
     authToken = res.data.data.token;
+  });
+
+  // 4b. Login Rate Limit Test (exceed 5 failed attempts -> 429 Too Many Requests)
+  await assert('Login Rate Limiter: Block after 5 failed attempts -> 429', async () => {
+    for (let i = 0; i < 5; i++) {
+      await request(
+        { hostname: 'localhost', path: '/api/auth/login', method: 'POST' },
+        { username: 'Sxatya', password: `wrong_${i}` }
+      );
+    }
+    // 6th attempt should be blocked by rate limiter with 429
+    const res = await request(
+      { hostname: 'localhost', path: '/api/auth/login', method: 'POST' },
+      { username: 'Sxatya', password: 'wrong_blocked' }
+    );
+    if (res.status !== 429 || !res.data.error || res.data.error.type !== 'RATE_LIMIT_EXCEEDED') {
+      throw new Error(`Expected 429 RATE_LIMIT_EXCEEDED, got status ${res.status}: ${JSON.stringify(res.data)}`);
+    }
   });
 
   // 5. Verify Session Token
@@ -108,14 +128,17 @@ async function runTests() {
     testSessionId = res.data.data.id;
   });
 
-  // 6. Camera Status (Authenticated)
-  await assert('Camera Status /api/camera/status (Authenticated)', async () => {
+  // 6. Camera Status (Authenticated & Mode Awareness)
+  await assert('Camera Status /api/camera/status (Mode awareness: Simulator/DSLR)', async () => {
     const res = await request(
       { hostname: 'localhost', path: '/api/camera/status', method: 'GET' },
       null,
       authToken
     );
     if (res.status !== 200 || !res.data.data.connected) throw new Error('Camera not connected');
+    if (res.data.data.simulated === undefined || !res.data.data.mode) {
+      throw new Error('Camera status missing simulated or mode flags');
+    }
   });
 
   // 7. Camera Capture (Authenticated)
@@ -128,6 +151,18 @@ async function runTests() {
     );
     if (res.status !== 200 || !res.data.data.id) throw new Error('Capture failed');
     capturedPhotoId = res.data.data.id;
+  });
+
+  // 7b. Reject Invalid Image Upload
+  await assert('Reject Invalid Image Payload /api/camera/capture -> 400', async () => {
+    const res = await request(
+      { hostname: 'localhost', path: '/api/camera/capture', method: 'POST' },
+      { sessionId: 'test_session', photoIndex: 2, imageBase64: 'data:image/jpeg;base64,not_a_valid_image_payload' },
+      authToken
+    );
+    if (res.status !== 400 || res.data.status !== 'error' || res.data.error.type !== 'INVALID_IMAGE') {
+      throw new Error(`Expected 400 INVALID_IMAGE, got: ${JSON.stringify(res.data)}`);
+    }
   });
 
   // 8. Photos List (Authenticated)
@@ -150,36 +185,92 @@ async function runTests() {
     if (res.status !== 200 || !res.data.data.layoutId) throw new Error('Layout generation failed');
   });
 
-  // 10. Printers List & Send (Authenticated)
-  await assert('Printers List & Send /api/print/send (Authenticated)', async () => {
+  // 10. Printers List & Send (Success)
+  let testPrintJobId = '';
+  await assert('Printers List & Send /api/print/send (Success)', async () => {
     const res = await request(
       { hostname: 'localhost', path: '/api/print/send', method: 'POST' },
       { layoutId: '4r_tpl_1', printerSettings: { copies: 1, paperSize: '4R' } },
       authToken
     );
-    if (res.status !== 200 || res.data.data.status !== 'printing') throw new Error('Print job send failed');
+    if (res.status !== 200 || !['queued', 'printing'].includes(res.data.data.status)) {
+      throw new Error('Print job send failed');
+    }
+    testPrintJobId = res.data.data.printJobId;
   });
 
-  // 10b. Google Drive Auto Upload /api/drive/upload (Authenticated)
-  await assert('Google Drive Auto Upload /api/drive/upload (Authenticated)', async () => {
-    const res = await request(
-      { hostname: 'localhost', path: '/api/drive/upload', method: 'POST' },
-      { sessionId: 'test_session', layoutFormat: '4R', compositeBase64: 'data:image/jpeg;base64,/9j/4AAQSkZJRg==' },
+  // 10a. Print Job Failure & Status Check
+  await assert('Print Job Failure & Status Check /api/print/status', async () => {
+    // 1. Force Fail should return 500 error
+    const failRes = await request(
+      { hostname: 'localhost', path: '/api/print/send', method: 'POST' },
+      { layoutId: '4r_tpl_1', forceFail: true },
       authToken
     );
-    if (res.status !== 200 || res.data.status !== 'success' || !res.data.data.driveUrl) {
-      throw new Error('Google Drive upload failed');
+    if (failRes.status !== 500 || failRes.data.status !== 'error') {
+      throw new Error('Expected 500 error on forced printer failure');
+    }
+
+    // 2. Query status of previously successful job
+    const statusRes = await request(
+      { hostname: 'localhost', path: `/api/print/status?jobId=${testPrintJobId}`, method: 'GET' },
+      null,
+      authToken
+    );
+    if (statusRes.status !== 200 || !statusRes.data.data.status) {
+      throw new Error('Print status query failed');
     }
   });
 
-  // 11. Static frontend assets, 4R, Photobooth Filters & Audio Beep
-  await assert('Frontend UI Serving /index.html with Notice Alert, 4R, Filters & Audio Beep', async () => {
+  // 10b. Google Drive Not Configured State
+  await assert('Google Drive /api/drive/status & /api/drive/upload (Not Configured State)', async () => {
+    // Status check
+    const statusRes = await request(
+      { hostname: 'localhost', path: '/api/drive/status', method: 'GET' },
+      null,
+      authToken
+    );
+    if (statusRes.status !== 200 || statusRes.data.data.status !== 'not_configured' || statusRes.data.data.configured !== false) {
+      throw new Error(`Expected not_configured status: ${JSON.stringify(statusRes.data)}`);
+    }
+
+    // Upload check when not configured (saves locally and returns honest not_configured status)
+    // Create valid 1x1 png base64 for testing
+    const validPngBase64 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+    const uploadRes = await request(
+      { hostname: 'localhost', path: '/api/drive/upload', method: 'POST' },
+      { sessionId: 'test_session', layoutFormat: '4R', compositeBase64: validPngBase64 },
+      authToken
+    );
+    if (uploadRes.status !== 200 || uploadRes.data.data.status !== 'not_configured' || !uploadRes.data.data.localSaved) {
+      throw new Error(`Expected not_configured with localSaved: true: ${JSON.stringify(uploadRes.data)}`);
+    }
+  });
+
+  // 10c. Daily Report & User Count /api/reports/daily (Authenticated)
+  await assert('Daily Report & User Count /api/reports/daily (Authenticated)', async () => {
+    const res = await request(
+      { hostname: 'localhost', path: '/api/reports/daily', method: 'GET' },
+      null,
+      authToken
+    );
+    if (res.status !== 200 || res.data.status !== 'success' || !res.data.data.today) {
+      throw new Error('Daily report failed');
+    }
+    if (typeof res.data.data.today.totalUsers !== 'number') {
+      throw new Error('Expected totalUsers in daily report');
+    }
+  });
+
+  // 11. Static frontend assets, 4R, Photobooth Filters, Audio Beep & Daily Report Modal
+  await assert('Frontend UI Serving /index.html with Notice Alert, 4R, Filters, Audio Beep & Daily Report Modal', async () => {
     const res = await request({ hostname: 'localhost', path: '/', method: 'GET' });
     if (res.status !== 200 || typeof res.data !== 'string') throw new Error('Failed to load index.html');
     if (!res.data.includes('printNoticeModal')) throw new Error('Missing printNoticeModal in index.html');
     if (!res.data.includes('btnLayout4R')) throw new Error('Missing 4R layout selector in index.html');
     if (!res.data.includes('pb-filter-grid')) throw new Error('Missing photobooth filter grid in index.html');
     if (!res.data.includes('btnAudioToggle')) throw new Error('Missing audio toggle button in index.html');
+    if (!res.data.includes('dailyReportModal')) throw new Error('Missing dailyReportModal in index.html');
   });
 
   // 12. Template Asset Serving

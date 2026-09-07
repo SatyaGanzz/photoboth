@@ -25,6 +25,7 @@ const state = {
   customTemplateDataUrl: null,
   timerDelay: 3,
   soundEnabled: true,
+  isCameraMirrored: true,
   cameraFx: {
     filter: 'none',
     vignette: false,
@@ -327,6 +328,42 @@ function setTimerDelay(delay, btnElement) {
   showToast(`Timer diatur ke ${delay === 0 ? 'OFF (Instan)' : delay + ' detik'}`);
 }
 
+function toggleCameraMirror() {
+  state.isCameraMirrored = !state.isCameraMirrored;
+  const video = document.getElementById('cameraVideo');
+  const text = document.getElementById('mirrorToggleText');
+  const btn = document.getElementById('btnMirrorToggle');
+
+  if (video) {
+    video.style.transform = state.isCameraMirrored ? 'scaleX(-1)' : 'scaleX(1)';
+  }
+  if (btn) btn.classList.toggle('active', state.isCameraMirrored);
+  if (text) text.textContent = state.isCameraMirrored ? 'MIRROR' : 'NORMAL';
+  showToast(`Cermin Kamera (Mirror): ${state.isCameraMirrored ? 'ON' : 'OFF'}`);
+}
+
+function toggleKioskMode() {
+  const isKiosk = document.body.classList.toggle('kiosk-mode');
+  const text = document.getElementById('kioskModeText');
+  const btn = document.getElementById('btnKioskMode');
+
+  if (isKiosk) {
+    if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    }
+    if (text) text.textContent = 'EXIT';
+    if (btn) btn.classList.add('active');
+    showToast('Mode Kiosk Aktif! Tampilan immersif bilik foto.', 'info');
+  } else {
+    if (document.fullscreenElement && document.exitFullscreen) {
+      document.exitFullscreen().catch(() => {});
+    }
+    if (text) text.textContent = 'KIOSK';
+    if (btn) btn.classList.remove('active');
+    showToast('Keluar dari Mode Kiosk');
+  }
+}
+
 function updateLiveReel() {
   const sessionPhotos = state.photos.filter((p) => !state.currentSessionId || p.sessionId === state.currentSessionId);
   const latestPhotos = sessionPhotos.slice(0, 3);
@@ -397,6 +434,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     applyCameraFxToLiveView();
     update4RFrameDimensions();
     openNewSessionModal();
+    fetchDailyReportSummary();
   }
   setupKeyboardShortcuts();
 });
@@ -790,8 +828,10 @@ async function captureCurrentFrame() {
     canvas.height = video.videoHeight;
     const ctx = canvas.getContext('2d');
     ctx.save();
-    ctx.translate(canvas.width, 0);
-    ctx.scale(-1, 1);
+    if (state.isCameraMirrored !== false) {
+      ctx.translate(canvas.width, 0);
+      ctx.scale(-1, 1);
+    }
     ctx.filter = getActiveCameraFilterString();
     ctx.drawImage(video, 0, 0);
     ctx.restore();
@@ -2233,6 +2273,9 @@ async function dispatchPrintJob() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        sessionId: state.currentSessionId,
+        customerName: state.currentCustomerName || 'Guest',
+        layoutFormat: state.strip.layoutFormat,
         layoutId: `${state.strip.layoutFormat}_tpl_${state.strip.templateId1}`,
         templateId: state.strip.templateId1,
         templateId2: state.strip.templateId2,
@@ -2260,6 +2303,9 @@ async function dispatchPrintJob() {
     } catch (driveErr) {
       console.error('Auto Drive upload failed:', driveErr);
     }
+
+    // Refresh data laporan harian (hitung user & cetak)
+    fetchDailyReportSummary();
 
     setTimeout(() => {
       if (bar) bar.style.display = 'none';
@@ -2309,6 +2355,141 @@ function syncGoogleDrive() {
   setTimeout(() => {
     showToast('Sesi berhasil tersinkronisasi ke Google Drive!', 'success');
   }, 1400);
+}
+
+// --- 6. DAILY USER COUNT & PRINT ANALYTICS REPORT ---
+async function fetchDailyReportSummary(showToastNotice = false) {
+  if (!state.authToken) return;
+  try {
+    const res = await authFetch('/api/reports/daily');
+    const result = await res.json();
+    if (result.status === 'success') {
+      const data = result.data;
+      const today = data.today || { totalUsers: 0, totalPrints: 0, totalCopies: 0, transactions: [] };
+
+      // Update Top Header Counter Badge
+      const headerBadge = document.getElementById('headerTodayUsersBadge');
+      if (headerBadge) {
+        headerBadge.textContent = `${today.totalUsers} User (${today.totalPrints} Cetak)`;
+      }
+
+      // Update Modal Stats
+      const elUsers = document.getElementById('reportTodayUsers');
+      const elPrints = document.getElementById('reportTodayPrints');
+      const elCopies = document.getElementById('reportTodayCopies');
+      const elAllTime = document.getElementById('reportAllTimeSummary');
+      const elTable = document.getElementById('dailyReportTableContent');
+
+      if (elUsers) elUsers.textContent = today.totalUsers;
+      if (elPrints) elPrints.textContent = today.totalPrints;
+      if (elCopies) elCopies.textContent = today.totalCopies;
+      if (elAllTime) {
+        elAllTime.textContent = `Total: ${data.allTimeTotalUsers || 0} user (${data.allTimeTotalCopies || 0} lembar)`;
+      }
+
+      if (elTable) {
+        const history = data.history || [];
+        if (history.length === 0 || (history.length === 1 && history[0].totalPrints === 0)) {
+          elTable.innerHTML = `<div style="font-size:0.75rem; color:var(--text-muted); text-align:center; padding:16px;">Belum ada transaksi cetak yang tercatat hari ini.</div>`;
+        } else {
+          elTable.innerHTML = history.map((day) => {
+            const isToday = day.date === (new Date().toISOString().split('T')[0]);
+            const badgeLabel = isToday ? 'HARI INI' : day.date;
+            const txCount = (day.transactions || []).length;
+            const txDetails = (day.transactions || []).slice(0, 10).map((tx) => {
+              const timeStr = tx.time ? new Date(tx.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-';
+              return `<div style="font-size:0.68rem; color:var(--text-secondary); display:flex; justify-content:space-between; padding:3px 0; border-bottom:1px dashed rgba(203,213,225,0.4);">
+                <span>• <strong>${tx.customerName || 'Guest'}</strong> <span class="mono" style="font-size:0.62rem; color:var(--text-muted);">(${tx.layoutFormat || '4R'}, ${tx.copies || 1} lembar)</span></span>
+                <span class="mono" style="color:var(--text-muted); font-weight:600;">${timeStr}</span>
+              </div>`;
+            }).join('');
+
+            return `
+              <div class="neu-flat-sm" style="padding: 10px; border-radius: var(--radius-sm); margin-bottom: 6px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                  <span style="font-weight: 800; font-size: 0.78rem; color: var(--text-main);">
+                    📅 ${badgeLabel} ${isToday ? `<span class="mono" style="font-size:0.65rem; color:var(--text-muted);">(${day.date})</span>` : ''}
+                  </span>
+                  <span class="neu-inset mono" style="padding: 3px 8px; font-size: 0.65rem; font-weight:700; color: var(--neu-accent);">
+                    ${day.totalUsers} USER // ${day.totalCopies} LEMBAR
+                  </span>
+                </div>
+                <div style="font-size: 0.65rem; color: var(--text-muted); margin-bottom: 6px;">
+                  Total Transaksi Cetak: <strong style="color:var(--text-main);">${day.totalPrints}</strong> | Log Sesi:
+                </div>
+                <div style="padding-left: 6px; border-left: 2px solid var(--neu-cyan);">
+                  ${txDetails || '<span style="font-size:0.65rem; color:var(--text-muted);">Belum ada cetak</span>'}
+                  ${txCount > 10 ? `<div style="font-size:0.6rem; color:var(--text-muted); font-style:italic; padding-top:2px;">+ ${txCount - 10} transaksi lainnya...</div>` : ''}
+                </div>
+              </div>
+            `;
+          }).join('');
+        }
+      }
+
+      if (showToastNotice) {
+        showToast('Data laporan harian berhasil diperbarui!', 'success');
+      }
+    }
+  } catch (err) {
+    console.error('Error fetching daily report:', err);
+  }
+}
+
+function openDailyReportModal() {
+  const modal = document.getElementById('dailyReportModal');
+  if (modal) {
+    modal.classList.remove('hidden');
+    fetchDailyReportSummary();
+    if (window.gsap) {
+      gsap.fromTo('#dailyReportCardElement', { scale: 0.9, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.3, ease: 'back.out(1.2)' });
+    }
+  }
+}
+
+function closeDailyReportModal() {
+  const modal = document.getElementById('dailyReportModal');
+  if (modal) modal.classList.add('hidden');
+}
+
+// --- 7. QR CODE SOFTFILE MODAL ---
+function openQRModal() {
+  const modal = document.getElementById('qrSoftfileModal');
+  const img = document.getElementById('qrCodeImage');
+  const sessDisplay = document.getElementById('qrSessionIdDisplay');
+
+  const sessId = state.currentSessionId || 'default_session';
+  if (sessDisplay) sessDisplay.textContent = `SESI: ${sessId}`;
+
+  // Link download foto digital untuk smartphone tamu
+  const downloadUrl = `${window.location.origin}/photos?sessionId=${encodeURIComponent(sessId)}`;
+
+  if (img) {
+    // Generate crisp 250x250 QR Code
+    img.src = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(downloadUrl)}&margin=8`;
+  }
+
+  if (modal) {
+    modal.classList.remove('hidden');
+    if (window.gsap) {
+      gsap.fromTo('#qrCardElement', { scale: 0.95, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.22, ease: 'power2.out' });
+    }
+  }
+}
+
+function closeQRModal() {
+  const modal = document.getElementById('qrSoftfileModal');
+  if (modal) modal.classList.add('hidden');
+}
+
+function copyDownloadLink() {
+  const sessId = state.currentSessionId || 'default_session';
+  const downloadUrl = `${window.location.origin}/photos?sessionId=${encodeURIComponent(sessId)}`;
+  navigator.clipboard.writeText(downloadUrl).then(() => {
+    showToast('Link download berhasil disalin ke clipboard!', 'success');
+  }).catch(() => {
+    showToast(`Link: ${downloadUrl}`);
+  });
 }
 
 // --- KEYBOARD SHORTCUTS ---
